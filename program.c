@@ -22,6 +22,8 @@ enum InstructionType
     INST_LET
 ,   INST_ADD
 ,   INST_SUBTRACT
+,   INST_TARGET
+,   INST_JUMP
 };
 
 struct Value
@@ -158,8 +160,25 @@ struct Value* resolve(struct Param* param)
     }
 }
 
-void interpret(struct Instruction* inst)
+int find_target(struct Function* func, char* label)
 {
+    for (int i = 0; i < func->instruction_count; i++)
+    {
+        if (func->instructions[i]->type != INST_TARGET)
+            continue;
+
+        if (strcmp(func->instructions[i]->params[0].value.data, label) == 0)
+            return i;
+    }
+
+    printf("Label %s not found\n", label);
+    exit(0);
+}
+
+int interpret(struct Function* function, int inst_ptr)
+{
+    struct Instruction* inst = function->instructions[inst_ptr];
+
     switch (inst->type)
     {
     case INST_LET:
@@ -193,17 +212,25 @@ void interpret(struct Instruction* inst)
         *((int*)target->value.data) = *((int*)left->data)+*((int*)right->data);
 
         break;
+    case INST_TARGET:
+        break;
+    case INST_JUMP:
+        return find_target(function, inst->params[0].value.data);
     default:
         printf("Unrecognized instruction type\n");
         exit(0);
     }
+
+    return inst_ptr + 1;
 }
 
 struct Function* make_function()
 {
     struct Function* ret = malloc(sizeof(struct Function*));
 
-    ret->instructions = malloc(3 * sizeof(struct Instruction*));
+    ret->instruction_count = 4;
+    ret->instructions = malloc(ret->instruction_count *
+                               sizeof(struct Instruction*));
 
     struct Instruction* inst = NULL;
 
@@ -220,27 +247,24 @@ struct Function* make_function()
 
     ret->instructions[0] = inst;
 
-    // int y = 3;
+    // again:
     inst = malloc(sizeof(struct Instruction));
-    inst->type = INST_LET;
-    params_allocate(inst, 2);
+    inst->type = INST_TARGET;
+    params_allocate(inst, 1);
 
     inst->params[0].type = PARAM_LABEL;
-    value_set_string(&inst->params[0].value, "y");
-
-    inst->params[1].type = PARAM_LITERAL;
-    value_set_int(&inst->params[1].value, 3);
+    value_set_string(&inst->params[0].value, "again");
 
     ret->instructions[1] = inst;
 
-    // y = x + 5;
+    // x = x + 5;
     inst = malloc(sizeof(struct Instruction));
     inst->type = INST_ADD;
 
     params_allocate(inst, 3);
 
     inst->params[0].type = PARAM_LABEL;
-    value_set_string(&inst->params[0].value, "y");
+    value_set_string(&inst->params[0].value, "x");
 
     inst->params[1].type = PARAM_LABEL;
     value_set_string(&inst->params[1].value, "x");
@@ -249,6 +273,17 @@ struct Function* make_function()
     value_set_int(&inst->params[2].value, 5);
 
     ret->instructions[2] = inst;
+
+    // goto again;
+    inst = malloc(sizeof(struct Instruction));
+    inst->type = INST_JUMP;
+
+    params_allocate(inst, 1);
+
+    inst->params[0].type = PARAM_LABEL;
+    value_set_string(&inst->params[0].value, "again");
+
+    ret->instructions[3] = inst;
 
     return ret;
 }
@@ -266,17 +301,18 @@ int main(int argc, char* argv[])
 {
     struct Function* function = make_function();
 
-    interpret(function->instructions[0]);
-    dump_locals();
-    printf("\n");
+    int inst_ptr = 0;
+    while (inst_ptr < function->instruction_count)
+    {
+        printf("LINE %d\n", inst_ptr);
 
-    interpret(function->instructions[1]);
-    dump_locals();
-    printf("\n");
-    
-    interpret(function->instructions[2]); 
-    dump_locals();
-    printf("\n");
+        int next = interpret(function, inst_ptr);
+
+        dump_locals();
+        printf("\n");
+
+        inst_ptr = next;
+    }
 
     function_free(function);
     
