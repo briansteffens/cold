@@ -9,14 +9,44 @@ enum VarType
 ,   TYPE_STRING
 };
 
+char* var_type_tostring(enum VarType input)
+{
+    switch (input)
+    {
+    case TYPE_INT:
+        return "int";
+    case TYPE_FLOAT:
+        return "float";
+    case TYPE_STRING:
+        return "string";
+    default:
+        printf("VarType %d not supported\n", input);
+        exit(0);
+    }
+}
+
 enum ParamType
 {
-    PARAM_TYPE
-,   PARAM_LABEL
-,   PARAM_VARIABLE
+    PARAM_LABEL
 ,   PARAM_LITERAL
 ,   PARAM_PATTERN
 };
+
+char* param_type_tostring(enum ParamType input)
+{
+    switch (input)
+    {
+    case PARAM_LABEL:
+        return "label";
+    case PARAM_LITERAL:
+        return "literal";
+    case PARAM_PATTERN:
+        return "pattern";
+    default:
+        printf("ParamType %d not supported\n", input);
+        exit(0);
+    }
+}
 
 enum InstructionType
 {
@@ -27,6 +57,28 @@ enum InstructionType
 ,   INST_RET
 ,   INST_PRINT
 };
+
+char* instruction_type_tostring(enum InstructionType input)
+{
+    switch (input)
+    {
+    case INST_LET:
+        return "let";
+    case INST_ADD:
+        return "add";
+    case INST_JUMP:
+        return "jmp";
+    case INST_CMP:
+        return "cmp";
+    case INST_RET:
+        return "ret";
+    case INST_PRINT:
+        return "prt";
+    default:
+        printf("InstructionType %d not supported\n", input);
+        exit(0);
+    }
+}
 
 enum Patterns
 {
@@ -42,6 +94,22 @@ struct Value
     int size;
 };
 
+void value_tostring(struct Value* val, char* buf, int n)
+{
+    switch (val->type)
+    {
+    case TYPE_INT:
+        snprintf(buf, n, "int(%d)", *((int*)val->data));
+        break;
+    case TYPE_STRING:
+        snprintf(buf, n, "string(%s)", val->data);
+        break;
+    default:
+        printf("Unsupported ValueType %d\n", val->type);
+        exit(0);
+    }
+}
+
 struct Local
 {
     char* name;
@@ -54,12 +122,35 @@ struct Param
     struct Value* value;
 };
 
+void param_tostring(struct Param* p, char* buf, int n)
+{
+    char val[100];
+    value_tostring(p->value, val, 100);
+
+    snprintf(buf, n, "%s %s", param_type_tostring(p->type), val);
+}
+
 struct Instruction
 {
     enum InstructionType type;
     struct Param** params;
     int param_count;
 };
+
+void instruction_tostring(struct Instruction* input, char* buf, int n)
+{
+    snprintf(buf, n, "%s ", instruction_type_tostring(input->type));
+
+    char param[100];
+    for (int i = 0; i < input->param_count; i++)
+    {
+        if (i > 0 && i < input->param_count)
+            strncat(buf, ", ", n - strlen(buf) - 2);
+
+        param_tostring(input->params[i], param, 100);
+        strncat(buf, param, n - strlen(buf) - strlen(param));
+    }
+}
 
 struct State
 {
@@ -185,7 +276,13 @@ struct Value* resolve(struct State* state, struct Param* param)
 
 void interpret(struct State* state)
 {
+    const int BUF_LEN = 100;
+    char buf[BUF_LEN];
+
     struct Instruction* inst = state->instructions[state->inst_ptr];
+
+    instruction_tostring(inst, buf, BUF_LEN);
+    printf("%d %s\n", state->inst_ptr, buf);
 
     switch (inst->type)
     {
@@ -253,7 +350,6 @@ void interpret(struct State* state)
             printf("Can't print this type\n");
             exit(0);
         }
-
 
         break;
     default:
@@ -470,6 +566,7 @@ void write_code(struct State* state)
     state->instructions[3] = inst;
 }
 
+
 void dump_locals(struct State* state)
 {
     for (int i = 0; i < state->local_count; i++)
@@ -477,43 +574,50 @@ void dump_locals(struct State* state)
                *((int*)state->locals[i]->value->data));
 }
 
-int main(int argc, char* argv[])
+void step(struct State** states, int state_count)
 {
-    struct State* state = malloc(sizeof(struct State));
-    state->locals = NULL;
-    state->local_count = 0;
-
-    write_code(state);
-
-    state->inst_ptr = 0;
-
-    while (state->inst_ptr < state->instruction_count)
+    for (int i = 0; i < state_count; i++)
     {
-        printf("LINE %d\n", state->inst_ptr);
+        if (states[i]->inst_ptr >= states[i]->instruction_count)
+            continue;
 
-        if (state->inst_ptr == 2)
+        int varied_count = 0;
+        struct State** varied = vary(states[i], &varied_count);
+
+        for (int j = 0; j < varied_count; j++)
         {
-            int varied_count = 0;
-            struct State** varied = vary(state, &varied_count);
+            interpret(varied[j]);
 
-            state = varied[1];
-
-            free(varied);
+            dump_locals(varied[j]);
+            printf("\n");
         }
 
-        interpret(state);
+        step(varied, varied_count);
 
-        dump_locals(state);
-        printf("\n");
+        // TODO: free varied
     }
+}
 
-    for (int i = 0; i < state->instruction_count; i++)
-        instruction_free(state->instructions[i]);
+int main(int argc, char* argv[])
+{
+    struct State** root = malloc(1 * sizeof(struct State*));
 
-    free(state->instructions);
+    root[0] = malloc(sizeof(struct State));
+    root[0]->locals = NULL;
+    root[0]->local_count = 0;
+
+    write_code(root[0]);
+    root[0]->inst_ptr = 0;
+
+    step(root, 1);
+
+    for (int i = 0; i < root[0]->instruction_count; i++)
+        instruction_free(root[0]->instructions[i]);
+
+    free(root[0]->instructions);
     
-    for (int i = 0; i < state->local_count; i++)
-        local_free(state->locals[i]);
+    for (int i = 0; i < root[0]->local_count; i++)
+        local_free(root[0]->locals[i]);
 
-    free(state->locals);
+    free(root[0]->locals);
 }
