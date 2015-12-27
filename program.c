@@ -99,10 +99,10 @@ void value_tostring(struct Value* val, char* buf, int n)
     switch (val->type)
     {
     case TYPE_INT:
-        snprintf(buf, n, "int(%d)", *((int*)val->data));
+        snprintf(buf, n, "%d", *((int*)val->data));
         break;
     case TYPE_STRING:
-        snprintf(buf, n, "string(%s)", val->data);
+        snprintf(buf, n, "%s", val->data);
         break;
     default:
         printf("Unsupported ValueType %d\n", val->type);
@@ -127,7 +127,8 @@ void param_tostring(struct Param* p, char* buf, int n)
     char val[100];
     value_tostring(p->value, val, 100);
 
-    snprintf(buf, n, "%s %s", param_type_tostring(p->type), val);
+    //snprintf(buf, n, "%s %s", param_type_tostring(p->type), val);
+    snprintf(buf, n, "%s", val);
 }
 
 struct Instruction
@@ -169,14 +170,19 @@ struct StateSet
     int state_count;
 };
 
-struct Local* get_local(struct State* state, const char* name)
+int find_local(struct State* state, const char* name)
 {
     for (int i = 0; i < state->local_count; i++)
         if (strcmp(state->locals[i]->name, name) == 0)
-            return state->locals[i];
+            return i;
 
     printf("Local %s not found\n", name);
     exit(0);
+}
+
+struct Local* get_local(struct State* state, const char* name)
+{
+    return state->locals[find_local(state, name)];
 }
 
 void value_set_int(struct Value* value, int val)
@@ -303,19 +309,25 @@ void interpret(struct State* state)
 
         break;
     case INST_ADD:; // ew, seriously c?
-        struct Local* target = get_local(state, inst->params[0]->value->data);
+        int target = find_local(state, inst->params[0]->value->data);
 
         struct Value* left = resolve(state, inst->params[1]);
         struct Value* right = resolve(state, inst->params[2]);
 
         if (left->type != TYPE_INT || right->type != TYPE_INT ||
-            target->value->type != TYPE_INT)
+            state->locals[target]->value->type != TYPE_INT)
         {
             printf("Type system can't support this\n");
             exit(0);
         }
 
-        *((int*)target->value->data) = *((int*)left->data)+*((int*)right->data);
+        // TODO: shallow copy?
+        struct Local* new_local = malloc(sizeof(struct Local));
+        new_local->name = state->locals[target]->name;
+        new_local->value = malloc(sizeof(struct Value));
+        value_set_int(new_local->value,
+            *((int*)left->data)+*((int*)right->data));
+        state->locals[target] = new_local;
 
         break;
     case INST_JUMP:
@@ -505,7 +517,7 @@ struct State** vary(struct State* input, int* state_count)
 
 void write_code(struct State* state)
 {
-    state->instruction_count = 4;
+    state->instruction_count = 5;
     state->instructions = malloc(state->instruction_count *
                                  sizeof(struct Instruction*));
 
@@ -537,7 +549,7 @@ void write_code(struct State* state)
 
     state->instructions[1] = inst;
 
-    // x = [l] + 1;
+    // x = [l] + [l];
     inst = malloc(sizeof(struct Instruction));
     inst->type = INST_ADD;
 
@@ -549,10 +561,29 @@ void write_code(struct State* state)
     inst->params[1]->type = PARAM_PATTERN;
     value_set_int(inst->params[1]->value, PTRN_LOCALS);
 
-    inst->params[2]->type = PARAM_LITERAL;
-    value_set_int(inst->params[2]->value, 1);
+    inst->params[2]->type = PARAM_PATTERN;
+    value_set_int(inst->params[2]->value, PTRN_LOCALS);
+    //inst->params[2]->type = PARAM_LITERAL;
+    //value_set_int(inst->params[2]->value, 1);
 
     state->instructions[2] = inst;
+
+    // y = [l] + 100;
+    inst = malloc(sizeof(struct Instruction));
+    inst->type = INST_ADD;
+
+    params_allocate(inst, 3);
+
+    inst->params[0]->type = PARAM_LABEL;
+    value_set_string(inst->params[0]->value, "y");
+
+    inst->params[1]->type = PARAM_PATTERN;
+    value_set_int(inst->params[1]->value, PTRN_LOCALS);
+
+    inst->params[2]->type = PARAM_LITERAL;
+    value_set_int(inst->params[2]->value, 100);
+
+    state->instructions[3] = inst;
 
     // print(x);
     inst = malloc(sizeof(struct Instruction));
@@ -563,7 +594,7 @@ void write_code(struct State* state)
     inst->params[0]->type = PARAM_LABEL;
     value_set_string(inst->params[0]->value, "x");
 
-    state->instructions[3] = inst;
+    state->instructions[4] = inst;
 }
 
 
@@ -574,12 +605,43 @@ void dump_locals(struct State* state)
                *((int*)state->locals[i]->value->data));
 }
 
+void free_state(struct State* state)
+{
+    // TODO: figure this out
+    return;
+
+    for (int i = 0; i < state->instruction_count; i++)
+        instruction_free(state->instructions[i]);
+
+    free(state->instructions);
+
+    for (int i = 0; i < state->local_count; i++)
+        local_free(state->locals[i]);
+
+    free(state->locals);
+
+    free(state);
+}
+
 void step(struct State** states, int state_count)
 {
     for (int i = 0; i < state_count; i++)
     {
         if (states[i]->inst_ptr >= states[i]->instruction_count)
+        {
+            const int BUF_LEN = 100;
+            char buf[BUF_LEN];
+
+            printf("---\n");
+            for (int j = 0; j < states[i]->instruction_count; j++)
+            {
+                instruction_tostring(states[i]->instructions[j], buf, BUF_LEN);
+                printf("%d %s\n", j, buf);
+            }
+            printf("---\n");
+
             continue;
+        }
 
         int varied_count = 0;
         struct State** varied = vary(states[i], &varied_count);
@@ -594,7 +656,10 @@ void step(struct State** states, int state_count)
 
         step(varied, varied_count);
 
-        // TODO: free varied
+        for (int j = 0; j < varied_count; j++)
+            free_state(varied[j]);
+
+        free(varied);
     }
 }
 
@@ -611,13 +676,6 @@ int main(int argc, char* argv[])
 
     step(root, 1);
 
-    for (int i = 0; i < root[0]->instruction_count; i++)
-        instruction_free(root[0]->instructions[i]);
-
-    free(root[0]->instructions);
-    
-    for (int i = 0; i < root[0]->local_count; i++)
-        local_free(root[0]->locals[i]);
-
-    free(root[0]->locals);
+    free_state(root[0]);
+    free(root);
 }
