@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+typedef enum { false, true } bool;
+
 enum VarType
 {
     TYPE_INT
@@ -170,6 +172,21 @@ struct StateSet
     int state_count;
 };
 
+struct Case
+{
+    struct Value* input_values;
+    struct Value expected;
+};
+
+struct Context
+{
+    char** input_names;
+    int input_count;
+
+    struct Case* cases;
+    int case_count;
+};
+
 int find_local(struct State* state, const char* name)
 {
     for (int i = 0; i < state->local_count; i++)
@@ -280,6 +297,24 @@ struct Value* resolve(struct State* state, struct Param* param)
     }
 }
 
+bool compare(struct Value* left, struct Value* right)
+{
+    if (left->type != TYPE_INT || right->type != TYPE_INT)
+    {
+        printf("Type system can't support this\n");
+        exit(0);
+    }
+
+    return *((int*)left->data) == *((int*)right->data);
+}
+
+void dump_locals(struct State* state)
+{
+    for (int i = 0; i < state->local_count; i++)
+        printf("LOCAL %s = %d\n", state->locals[i]->name,
+               *((int*)state->locals[i]->value->data));
+}
+
 void interpret(struct State* state)
 {
     const int BUF_LEN = 100;
@@ -368,6 +403,9 @@ void interpret(struct State* state)
         printf("Unrecognized instruction type\n");
         exit(0);
     }
+
+    dump_locals(state);
+    printf("\n");
 
     state->inst_ptr++;
 }
@@ -597,14 +635,6 @@ void write_code(struct State* state)
     state->instructions[4] = inst;
 }
 
-
-void dump_locals(struct State* state)
-{
-    for (int i = 0; i < state->local_count; i++)
-        printf("LOCAL %s = %d\n", state->locals[i]->name,
-               *((int*)state->locals[i]->value->data));
-}
-
 void free_state(struct State* state)
 {
     // TODO: figure this out
@@ -623,7 +653,65 @@ void free_state(struct State* state)
     free(state);
 }
 
-void step(struct State** states, int state_count)
+struct State* setup_state(struct Context* ctx, int case_index)
+{
+    struct State* ret = malloc(1 * sizeof(struct State));
+
+    ret->local_count = ctx->input_count;
+    ret->locals = malloc(ret->local_count * sizeof(struct Local*));
+
+    for (int i = 0; i < ctx->input_count; i++)
+    {
+        ret->locals[i] = malloc(sizeof(struct Local));
+        ret->locals[i]->name = ctx->input_names[i];
+        ret->locals[i]->value = value_clone(&ctx->cases[case_index].input_values[i]);
+    }
+
+    return ret;
+}
+
+bool expect(struct State* state, struct Value* expected)
+{
+    for (int k = 0; k < state->local_count; k++)
+    {
+        if (!compare(state->locals[k]->value, expected))
+            continue;
+
+        printf("*** FOUND ***\n");
+
+        return true;
+    }
+
+    return false;
+}
+
+void check_cases(struct Context* ctx, struct State* base)
+{
+    struct State** states = malloc(sizeof(struct State*));
+
+    for (int i = 1; i < ctx->case_count; i++)
+    {
+        states[0] = setup_state(ctx, i);
+
+        states[0]->instructions = base->instructions;
+        states[0]->instruction_count = base->instruction_count;
+
+        printf("CASE %d\n", i);
+
+        while (states[0]->inst_ptr < states[0]->instruction_count)
+            interpret(states[0]);
+
+        if (expect(states[0], &ctx->cases[i].expected))
+            printf("YIPPEE\n");
+
+        states[0]->instructions = NULL;
+        free_state(states[0]);
+    }
+
+    free(states);
+}
+
+void step(struct Context* ctx, struct State** states, int state_count)
 {
     for (int i = 0; i < state_count; i++)
     {
@@ -650,11 +738,11 @@ void step(struct State** states, int state_count)
         {
             interpret(varied[j]);
 
-            dump_locals(varied[j]);
-            printf("\n");
+            if (expect(varied[j], &ctx->cases[0].expected))
+                check_cases(ctx, varied[j]);
         }
 
-        step(varied, varied_count);
+        step(ctx, varied, varied_count);
 
         for (int j = 0; j < varied_count; j++)
             free_state(varied[j]);
@@ -665,17 +753,38 @@ void step(struct State** states, int state_count)
 
 int main(int argc, char* argv[])
 {
+    struct Context ctx;
+    ctx.input_count = 1;
+    ctx.input_names = malloc(ctx.input_count * sizeof(char*));
+    ctx.input_names[0] = "z";
+    
+    ctx.case_count = 2;
+    ctx.cases = malloc(ctx.case_count * sizeof(struct Case));
+
+    ctx.cases[0].input_values = malloc(ctx.input_count * sizeof(struct Value));
+    
+    value_set_int(&ctx.cases[0].input_values[0], 2);
+    value_set_int(&ctx.cases[0].expected, 3);
+    
+    ctx.cases[1].input_values = malloc(ctx.input_count * sizeof(struct Value));
+
+    value_set_int(&ctx.cases[1].input_values[0], 6);
+    value_set_int(&ctx.cases[1].expected, 7);
+
     struct State** root = malloc(1 * sizeof(struct State*));
 
-    root[0] = malloc(sizeof(struct State));
-    root[0]->locals = NULL;
-    root[0]->local_count = 0;
+    root[0] = setup_state(&ctx, 0);
 
     write_code(root[0]);
     root[0]->inst_ptr = 0;
 
-    step(root, 1);
+    step(&ctx, root, 1);
 
     free_state(root[0]);
     free(root);
+
+    free(ctx.input_names);
+    for (int i = 0; i < ctx.case_count; i++)
+        free(ctx.cases[i].input_values);
+    free(ctx.cases);
 }
