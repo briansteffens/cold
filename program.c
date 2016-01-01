@@ -164,6 +164,8 @@ struct State
     int instruction_count;
 
     int inst_ptr;
+
+    struct Value* ret;
 };
 
 struct StateSet
@@ -292,7 +294,7 @@ struct Value* resolve(struct State* state, struct Param* param)
     case PARAM_LITERAL:
         return param->value;
     default:
-        printf("Unrecognized param type\n");
+        printf("Unrecognized param type: %d\n", param->type);
         exit(0);
     }
 }
@@ -399,8 +401,11 @@ void interpret(struct State* state)
         }
 
         break;
+    case INST_RET:
+        state->ret = resolve(state, inst->params[0]);
+        break;
     default:
-        printf("Unrecognized instruction type\n");
+        printf("Unrecognized instruction type: %d\n", inst->type);
         exit(0);
     }
 
@@ -555,7 +560,7 @@ struct State** vary(struct State* input, int* state_count)
 
 void write_code(struct State* state)
 {
-    state->instruction_count = 5;
+    state->instruction_count = 2;
     state->instructions = malloc(state->instruction_count *
                                  sizeof(struct Instruction*));
 
@@ -574,20 +579,7 @@ void write_code(struct State* state)
 
     state->instructions[0] = inst;
 
-    // int y = 3;
-    inst = malloc(sizeof(struct Instruction));
-    inst->type = INST_LET;
-    params_allocate(inst, 2);
-
-    inst->params[0]->type = PARAM_LABEL;
-    value_set_string(inst->params[0]->value, "y");
-
-    inst->params[1]->type = PARAM_LITERAL;
-    value_set_int(inst->params[1]->value, 3);
-
-    state->instructions[1] = inst;
-
-    // x = [l] + [l];
+    // x = [l] + 1;
     inst = malloc(sizeof(struct Instruction));
     inst->type = INST_ADD;
 
@@ -595,44 +587,14 @@ void write_code(struct State* state)
 
     inst->params[0]->type = PARAM_LABEL;
     value_set_string(inst->params[0]->value, "x");
-
-    inst->params[1]->type = PARAM_PATTERN;
-    value_set_int(inst->params[1]->value, PTRN_LOCALS);
-
-    inst->params[2]->type = PARAM_PATTERN;
-    value_set_int(inst->params[2]->value, PTRN_LOCALS);
-    //inst->params[2]->type = PARAM_LITERAL;
-    //value_set_int(inst->params[2]->value, 1);
-
-    state->instructions[2] = inst;
-
-    // y = [l] + 100;
-    inst = malloc(sizeof(struct Instruction));
-    inst->type = INST_ADD;
-
-    params_allocate(inst, 3);
-
-    inst->params[0]->type = PARAM_LABEL;
-    value_set_string(inst->params[0]->value, "y");
 
     inst->params[1]->type = PARAM_PATTERN;
     value_set_int(inst->params[1]->value, PTRN_LOCALS);
 
     inst->params[2]->type = PARAM_LITERAL;
-    value_set_int(inst->params[2]->value, 100);
+    value_set_int(inst->params[2]->value, 1);
 
-    state->instructions[3] = inst;
-
-    // print(x);
-    inst = malloc(sizeof(struct Instruction));
-    inst->type = INST_PRINT;
-
-    params_allocate(inst, 1);
-
-    inst->params[0]->type = PARAM_LABEL;
-    value_set_string(inst->params[0]->value, "x");
-
-    state->instructions[4] = inst;
+    state->instructions[1] = inst;
 }
 
 void free_state(struct State* state)
@@ -667,10 +629,12 @@ struct State* setup_state(struct Context* ctx, int case_index)
         ret->locals[i]->value = value_clone(&ctx->cases[case_index].input_values[i]);
     }
 
+    ret->ret = NULL;
+
     return ret;
 }
 
-bool expect(struct State* state, struct Value* expected)
+struct Local* expect(struct State* state, struct Value* expected)
 {
     for (int k = 0; k < state->local_count; k++)
     {
@@ -679,36 +643,65 @@ bool expect(struct State* state, struct Value* expected)
 
         printf("*** FOUND ***\n");
 
-        return true;
+        return state->locals[k];
     }
 
-    return false;
+    return NULL;
 }
 
-void check_cases(struct Context* ctx, struct State* base)
+bool check_cases(struct Context* ctx, struct State* base, struct Local* found)
 {
     struct State** states = malloc(sizeof(struct State*));
+
+    // Setup return instruction
+    struct Instruction* ret_inst = malloc(sizeof(struct Instruction));
+    ret_inst->type = INST_RET;
+    params_allocate(ret_inst, 1);
+    ret_inst->params[0]->type = PARAM_LABEL;
+    value_set_string(ret_inst->params[0]->value, found->name);
+
+    bool success = true;
 
     for (int i = 1; i < ctx->case_count; i++)
     {
         states[0] = setup_state(ctx, i);
 
-        states[0]->instructions = base->instructions;
-        states[0]->instruction_count = base->instruction_count;
+        printf("inst_ptr: %d\n", base->inst_ptr);
+        states[0]->instruction_count = base->inst_ptr + 1;
+        states[0]->instructions = malloc(states[0]->instruction_count *
+            sizeof(struct Instruction*));
+
+        for (int j = 0; j < states[0]->instruction_count - 1; j++)
+            states[0]->instructions[j] = base->instructions[j];
+
+        states[0]->instructions[states[0]->instruction_count - 1] = ret_inst;
 
         printf("CASE %d\n", i);
-
+        printf("lines: %d\n", states[0]->instruction_count);
         while (states[0]->inst_ptr < states[0]->instruction_count)
             interpret(states[0]);
 
-        if (expect(states[0], &ctx->cases[i].expected))
-            printf("YIPPEE\n");
+        if (!compare(states[0]->ret, &ctx->cases[i].expected))
+        {
+            printf("FAIL: CASE %d\n", i);
+            success = false;
+        }
 
+        // Remove instruction pointers so they don't get freed
         states[0]->instructions = NULL;
+        states[0]->instruction_count = 0;
+
         free_state(states[0]);
+
+        if (!success)
+            break;
     }
 
+    free(ret_inst);
     free(states);
+    printf("*** LEAVING\n");
+
+    return success;
 }
 
 void step(struct Context* ctx, struct State** states, int state_count)
@@ -738,8 +731,13 @@ void step(struct Context* ctx, struct State** states, int state_count)
         {
             interpret(varied[j]);
 
-            if (expect(varied[j], &ctx->cases[0].expected))
-                check_cases(ctx, varied[j]);
+            struct Local* found = expect(varied[j], &ctx->cases[0].expected);
+
+            if (found && check_cases(ctx, varied[j], found))
+            {
+                printf("Found it\n");
+                exit(0);
+            }
         }
 
         step(ctx, varied, varied_count);
