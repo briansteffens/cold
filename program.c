@@ -4,6 +4,8 @@
 
 typedef enum { false, true } bool;
 
+const bool DUMP_LOCALS = false;
+
 enum VarType
 {
     TYPE_INT
@@ -129,7 +131,6 @@ void param_tostring(struct Param* p, char* buf, int n)
     char val[100];
     value_tostring(p->value, val, 100);
 
-    //snprintf(buf, n, "%s %s", param_type_tostring(p->type), val);
     snprintf(buf, n, "%s", val);
 }
 
@@ -409,8 +410,11 @@ void interpret(struct State* state)
         exit(0);
     }
 
-    dump_locals(state);
-    printf("\n");
+    if (DUMP_LOCALS)
+    {
+        dump_locals(state);
+        printf("\n");
+    }
 
     state->inst_ptr++;
 }
@@ -641,8 +645,6 @@ struct Local* expect(struct State* state, struct Value* expected)
         if (!compare(state->locals[k]->value, expected))
             continue;
 
-        printf("*** FOUND ***\n");
-
         return state->locals[k];
     }
 
@@ -699,9 +701,20 @@ bool check_cases(struct Context* ctx, struct State* base, struct Local* found)
 
     free(ret_inst);
     free(states);
-    printf("*** LEAVING\n");
 
     return success;
+}
+
+void print_program(struct State* state)
+{
+    const int BUF_LEN = 100;
+    char buf[BUF_LEN];
+
+    for (int i = 0; i < state->instruction_count; i++)
+    {
+        instruction_tostring(state->instructions[i], buf, BUF_LEN);
+        printf("%d %s\n", i, buf);
+    }
 }
 
 void step(struct Context* ctx, struct State** states, int state_count)
@@ -710,15 +723,8 @@ void step(struct Context* ctx, struct State** states, int state_count)
     {
         if (states[i]->inst_ptr >= states[i]->instruction_count)
         {
-            const int BUF_LEN = 100;
-            char buf[BUF_LEN];
-
             printf("---\n");
-            for (int j = 0; j < states[i]->instruction_count; j++)
-            {
-                instruction_tostring(states[i]->instructions[j], buf, BUF_LEN);
-                printf("%d %s\n", j, buf);
-            }
+            print_program(states[i]);
             printf("---\n");
 
             continue;
@@ -735,7 +741,8 @@ void step(struct Context* ctx, struct State** states, int state_count)
 
             if (found && check_cases(ctx, varied[j], found))
             {
-                printf("Found it\n");
+                printf("*** SOLUTION ***\n");
+                print_program(varied[j]);
                 exit(0);
             }
         }
