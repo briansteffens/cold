@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 
 typedef enum { false, true } bool;
 
@@ -159,9 +160,11 @@ void instruction_tostring(struct Instruction* input, char* buf, int n)
 struct State
 {
     struct Local** locals;
+    bool* locals_owned;
     int local_count;
 
     struct Instruction** instructions;
+    bool* instructions_owned;
     int instruction_count;
 
     int inst_ptr;
@@ -188,6 +191,9 @@ struct Context
 
     struct Case* cases;
     int case_count;
+
+    struct Instruction** solution_inst;
+    int solution_inst_count;
 };
 
 int find_local(struct State* state, const char* name)
@@ -238,10 +244,10 @@ void value_free(const struct Value* value)
     free(value->data);
 }
 
-void local_free(const struct Local* local)
+void local_free(struct Local* local)
 {
-    free(local->name);
     value_free(local->value);
+    free(local);
 }
 
 void value_print(const struct Value* value)
@@ -278,12 +284,6 @@ void instruction_free(struct Instruction* inst)
         value_free(inst->params[i]->value);
 
     free(inst->params);
-}
-
-void state_free(struct State* state)
-{
-    for (int i = 0; i < state->instruction_count; i++)
-        instruction_free(state->instructions[i]);
 }
 
 struct Value* resolve(struct State* state, struct Param* param)
@@ -334,6 +334,8 @@ void interpret(struct State* state)
         state->local_count++;
         state->locals = realloc(state->locals,
             state->local_count * sizeof(struct Local*));
+        state->locals_owned = realloc(state->locals_owned,
+            state->local_count * sizeof(bool));
 
         struct Local* local = malloc(sizeof(struct Local));
 
@@ -344,6 +346,7 @@ void interpret(struct State* state)
         local->value = value_clone(inst->params[1]->value);
 
         state->locals[state->local_count - 1] = local;
+        state->locals_owned[state->local_count - 1] = true;
 
         break;
     case INST_ADD:; // ew, seriously c?
@@ -359,13 +362,13 @@ void interpret(struct State* state)
             exit(0);
         }
 
-        // TODO: shallow copy?
         struct Local* new_local = malloc(sizeof(struct Local));
         new_local->name = state->locals[target]->name;
         new_local->value = malloc(sizeof(struct Value));
         value_set_int(new_local->value,
             *((int*)left->data)+*((int*)right->data));
         state->locals[target] = new_local;
+        state->locals_owned[target] = true;
 
         break;
     case INST_JUMP:
@@ -424,17 +427,25 @@ struct State* state_fork(struct State* orig)
     struct State* ret = malloc(sizeof(struct State));
 
     ret->local_count = orig->local_count;
+    ret->locals_owned = malloc(ret->local_count * sizeof(bool));
     ret->locals = malloc(ret->local_count * sizeof(struct Local*));
 
     for (int i = 0; i < ret->local_count; i++)
+    {
         ret->locals[i] = orig->locals[i];
+        ret->locals_owned[i] = false;
+    }
 
     ret->instruction_count = orig->instruction_count;
+    ret->instructions_owned = malloc(ret->instruction_count * sizeof(bool));
     ret->instructions = malloc(ret->instruction_count *
                                sizeof(struct Instruction*));
 
     for (int i = 0; i < ret->instruction_count; i++)
+    {
         ret->instructions[i] = orig->instructions[i];
+        ret->instructions_owned[i] = false;
+    }
 
     ret->inst_ptr = orig->inst_ptr;
 
@@ -464,7 +475,11 @@ struct Instruction* instruction_clone(struct Instruction* orig)
     ret->params = malloc(ret->param_count * sizeof(struct Param*));
 
     for (int i = 0; i < ret->param_count; i++)
-        ret->params[i] = orig->params[i];
+    {
+        ret->params[i] = malloc(sizeof(struct Param));
+        ret->params[i]->type = orig->params[i]->type;
+        ret->params[i]->value = value_clone(orig->params[i]->value);
+    }
 
     return ret;
 }
@@ -534,6 +549,9 @@ struct Instruction** vary_instructions(
         break;
     }
 
+    // TODO: remove? this should never happen but just in case..
+    assert(*instruction_count != 1);
+
     if (*instruction_count == 0)
     {
         ret = realloc(ret, 1 * sizeof(struct Instruction*));
@@ -549,12 +567,18 @@ struct State** vary(struct State* input, int* state_count)
     struct Instruction** insts = vary_instructions(
         input, input->instructions[input->inst_ptr], state_count);
 
+    // If the instruction was varied (forked into multiple instructions),
+    // then they are new copies and the new forked states "own" them.
+    // Otherwise they're pointing to the input state's instruction.
+    bool did_vary = (*state_count > 1);
+
     struct State** ret = malloc(*state_count * sizeof(struct State*));
 
     for (int i = 0; i < *state_count; i++)
     {
         ret[i] = state_fork(input);
         ret[i]->instructions[ret[i]->inst_ptr] = insts[i];
+        ret[i]->instructions_owned[ret[i]->inst_ptr] = did_vary;
     }
 
     free(insts);
@@ -564,9 +588,10 @@ struct State** vary(struct State* input, int* state_count)
 
 void write_code(struct State* state)
 {
-    state->instruction_count = 2;
+    state->instruction_count = 3;
     state->instructions = malloc(state->instruction_count *
                                  sizeof(struct Instruction*));
+    state->instructions_owned = malloc(state->instruction_count * sizeof(bool));
 
     struct Instruction* inst = NULL;
 
@@ -599,20 +624,39 @@ void write_code(struct State* state)
     value_set_int(inst->params[2]->value, 1);
 
     state->instructions[1] = inst;
+
+    // x = [l] + 1;
+    inst = malloc(sizeof(struct Instruction));
+    inst->type = INST_ADD;
+
+    params_allocate(inst, 3);
+
+    inst->params[0]->type = PARAM_LABEL;
+    value_set_string(inst->params[0]->value, "x");
+
+    inst->params[1]->type = PARAM_PATTERN;
+    value_set_int(inst->params[1]->value, PTRN_LOCALS);
+
+    inst->params[2]->type = PARAM_LITERAL;
+    value_set_int(inst->params[2]->value, 1);
+
+    state->instructions[2] = inst;
+
+    for (int i = 0; i < state->instruction_count; i++)
+        state->instructions_owned[i] = true;
 }
 
 void free_state(struct State* state)
 {
-    // TODO: figure this out
-    return;
-
     for (int i = 0; i < state->instruction_count; i++)
-        instruction_free(state->instructions[i]);
+        if (state->instructions_owned[i])
+            instruction_free(state->instructions[i]);
 
     free(state->instructions);
 
     for (int i = 0; i < state->local_count; i++)
-        local_free(state->locals[i]);
+        if (state->locals_owned[i])
+            local_free(state->locals[i]);
 
     free(state->locals);
 
@@ -625,12 +669,15 @@ struct State* setup_state(struct Context* ctx, int case_index)
 
     ret->local_count = ctx->input_count;
     ret->locals = malloc(ret->local_count * sizeof(struct Local*));
+    ret->locals_owned = malloc(ret->local_count * sizeof(bool));
 
     for (int i = 0; i < ctx->input_count; i++)
     {
         ret->locals[i] = malloc(sizeof(struct Local));
         ret->locals[i]->name = ctx->input_names[i];
         ret->locals[i]->value = value_clone(&ctx->cases[case_index].input_values[i]);
+
+        ret->locals_owned[i] = true;
     }
 
     ret->ret = NULL;
@@ -651,7 +698,7 @@ struct Local* expect(struct State* state, struct Value* expected)
     return NULL;
 }
 
-bool check_cases(struct Context* ctx, struct State* base, struct Local* found)
+void check_cases(struct Context* ctx, struct State* base, struct Local* found)
 {
     struct State** states = malloc(sizeof(struct State*));
 
@@ -662,36 +709,46 @@ bool check_cases(struct Context* ctx, struct State* base, struct Local* found)
     ret_inst->params[0]->type = PARAM_LABEL;
     value_set_string(ret_inst->params[0]->value, found->name);
 
-    bool success = true;
-
     for (int i = 1; i < ctx->case_count; i++)
     {
         states[0] = setup_state(ctx, i);
 
-        printf("inst_ptr: %d\n", base->inst_ptr);
         states[0]->instruction_count = base->inst_ptr + 1;
         states[0]->instructions = malloc(states[0]->instruction_count *
             sizeof(struct Instruction*));
+        states[0]->instructions_owned = malloc(
+            states[0]->instruction_count * sizeof(bool));
 
         for (int j = 0; j < states[0]->instruction_count - 1; j++)
+        {
             states[0]->instructions[j] = base->instructions[j];
+            states[0]->instructions_owned[j] = false;
+        }
 
         states[0]->instructions[states[0]->instruction_count - 1] = ret_inst;
+        states[0]->instructions_owned[states[0]->instruction_count - 1] = false;
 
         printf("CASE %d\n", i);
-        printf("lines: %d\n", states[0]->instruction_count);
         while (states[0]->inst_ptr < states[0]->instruction_count)
             interpret(states[0]);
 
+        bool success = true;
         if (!compare(states[0]->ret, &ctx->cases[i].expected))
         {
             printf("FAIL: CASE %d\n", i);
             success = false;
         }
+        else if (i == ctx->case_count - 1)
+        {
+            // Success: copy solution program to context
+            ctx->solution_inst_count = states[0]->instruction_count;
+            ctx->solution_inst = malloc(
+                ctx->solution_inst_count * sizeof(struct Instruction*));
 
-        // Remove instruction pointers so they don't get freed
-        states[0]->instructions = NULL;
-        states[0]->instruction_count = 0;
+            for (int i = 0; i < ctx->solution_inst_count; i++)
+                ctx->solution_inst[i] = instruction_clone(
+                    states[0]->instructions[i]);
+        }
 
         free_state(states[0]);
 
@@ -701,18 +758,16 @@ bool check_cases(struct Context* ctx, struct State* base, struct Local* found)
 
     free(ret_inst);
     free(states);
-
-    return success;
 }
 
-void print_program(struct State* state)
+void print_program(struct Instruction** inst, int count)
 {
     const int BUF_LEN = 100;
     char buf[BUF_LEN];
 
-    for (int i = 0; i < state->instruction_count; i++)
+    for (int i = 0; i < count; i++)
     {
-        instruction_tostring(state->instructions[i], buf, BUF_LEN);
+        instruction_tostring(inst[i], buf, BUF_LEN);
         printf("%d %s\n", i, buf);
     }
 }
@@ -724,7 +779,7 @@ void step(struct Context* ctx, struct State** states, int state_count)
         if (states[i]->inst_ptr >= states[i]->instruction_count)
         {
             printf("---\n");
-            print_program(states[i]);
+            print_program(states[i]->instructions,states[i]->instruction_count);
             printf("---\n");
 
             continue;
@@ -739,26 +794,37 @@ void step(struct Context* ctx, struct State** states, int state_count)
 
             struct Local* found = expect(varied[j], &ctx->cases[0].expected);
 
-            if (found && check_cases(ctx, varied[j], found))
+            if (found)
             {
-                printf("*** SOLUTION ***\n");
-                print_program(varied[j]);
-                exit(0);
+                check_cases(ctx, varied[j], found);
+                if (ctx->solution_inst)
+                {
+                    printf("*** SOLUTION ***\n");
+                    print_program(ctx->solution_inst, ctx->solution_inst_count);
+                    break;
+                }
             }
         }
 
-        step(ctx, varied, varied_count);
+        if (!ctx->solution_inst)
+            step(ctx, varied, varied_count);
 
         for (int j = 0; j < varied_count; j++)
             free_state(varied[j]);
 
         free(varied);
+
+        if (ctx->solution_inst)
+            break;
     }
 }
 
 int main(int argc, char* argv[])
 {
     struct Context ctx;
+    ctx.solution_inst = NULL;
+    ctx.solution_inst_count = 0;
+
     ctx.input_count = 1;
     ctx.input_names = malloc(ctx.input_count * sizeof(char*));
     ctx.input_names[0] = "z";
@@ -768,12 +834,12 @@ int main(int argc, char* argv[])
 
     ctx.cases[0].input_values = malloc(ctx.input_count * sizeof(struct Value));
     
-    value_set_int(&ctx.cases[0].input_values[0], 2);
+    value_set_int(&ctx.cases[0].input_values[0], 1);
     value_set_int(&ctx.cases[0].expected, 3);
     
     ctx.cases[1].input_values = malloc(ctx.input_count * sizeof(struct Value));
 
-    value_set_int(&ctx.cases[1].input_values[0], 6);
+    value_set_int(&ctx.cases[1].input_values[0], 5);
     value_set_int(&ctx.cases[1].expected, 7);
 
     struct State** root = malloc(1 * sizeof(struct State*));
