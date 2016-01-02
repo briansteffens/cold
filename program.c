@@ -109,6 +109,9 @@ void value_tostring(struct Value* val, char* buf, int n)
     case TYPE_INT:
         snprintf(buf, n, "%d", *((int*)val->data));
         break;
+    case TYPE_FLOAT:
+        snprintf(buf, n, "%f", *((float*)val->data));
+        break;
     case TYPE_STRING:
         snprintf(buf, n, "%s", val->data);
         break;
@@ -197,6 +200,8 @@ struct Context
 
     struct Instruction** solution_inst;
     int solution_inst_count;
+
+    struct Value precision;
 };
 
 int find_local(struct State* state, const char* name)
@@ -220,6 +225,14 @@ void value_set_int(struct Value* value, int val)
     value->size = sizeof(int);
     value->data = malloc(value->size);
     *((int*)value->data) = val;
+}
+
+void value_set_float(struct Value* value, float val)
+{
+    value->type = TYPE_FLOAT;
+    value->size = sizeof(float);
+    value->data = malloc(value->size);
+    *((float*)value->data) = val;
 }
 
 void value_set_string(struct Value* value, char* val)
@@ -303,15 +316,26 @@ struct Value* resolve(struct State* state, struct Param* param)
     }
 }
 
-bool compare(struct Value* left, struct Value* right)
+bool compare(struct Context* ctx, struct Value* left, struct Value* right)
 {
-    if (left->type != TYPE_INT || right->type != TYPE_INT)
+    if (left->type == TYPE_INT && right->type == TYPE_INT)
     {
-        printf("Type system can't support this\n");
+        return *((int*)left->data) == *((int*)right->data);
+    }
+    else if (left->type == TYPE_FLOAT && right->type == TYPE_FLOAT &&
+             ctx->precision.type == TYPE_FLOAT)
+    {
+        float f_left = *((float*)left->data);
+        float f_right = *((float*)right->data);
+        float f_precision = *((float*)ctx->precision.data);
+        return f_left >= f_right-f_precision && f_left <= f_right+f_precision;
+    }
+    else
+    {
+        printf("compare() can't support these types: %d == %d\n",
+            left->type, right->type);
         exit(0);
     }
-
-    return *((int*)left->data) == *((int*)right->data);
 }
 
 void dump_locals(struct State* state)
@@ -359,27 +383,45 @@ void interpret(struct State* state)
         struct Value* left = resolve(state, inst->params[1]);
         struct Value* right = resolve(state, inst->params[2]);
 
-        if (left->type != TYPE_INT || right->type != TYPE_INT ||
-            state->locals[target]->value->type != TYPE_INT)
-        {
-            printf("Type system can't support this\n");
-            exit(0);
-        }
-
         struct Local* new_local = malloc(sizeof(struct Local));
         new_local->name = state->locals[target]->name;
         new_local->value = malloc(sizeof(struct Value));
 
-        switch (inst->type)
+        if (left->type == TYPE_INT && right->type == TYPE_INT &&
+            state->locals[target]->value->type == TYPE_INT)
         {
-        case INST_ADD:
-            value_set_int(new_local->value,
-                *((int*)left->data)+*((int*)right->data));
-            break;
-        case INST_MUL:
-            value_set_int(new_local->value,
-                *((int*)left->data)**((int*)right->data));
-            break;
+            switch (inst->type)
+            {
+            case INST_ADD:
+                value_set_int(new_local->value,
+                    *((int*)left->data)+*((int*)right->data));
+                break;
+            case INST_MUL:
+                value_set_int(new_local->value,
+                    *((int*)left->data)**((int*)right->data));
+                break;
+            }
+        }
+        else if (left->type == TYPE_FLOAT && right->type == TYPE_FLOAT &&
+                 state->locals[target]->value->type == TYPE_FLOAT)
+        {
+            switch (inst->type)
+            {
+            case INST_ADD:
+                value_set_float(new_local->value,
+                    *((float*)left->data)+*((float*)right->data));
+                break;
+            case INST_MUL:
+                value_set_float(new_local->value,
+                    *((float*)left->data)**((float*)right->data));
+                break;
+            }
+        }
+        else
+        {
+            printf("interpret() can't handle these types: %d, %d, %d\n",
+                left->type, right->type, state->locals[target]->value->type);
+            exit(0);
         }
 
         state->locals[target] = new_local;
@@ -610,7 +652,7 @@ void write_code(struct State* state)
 
     struct Instruction* inst = NULL;
 
-    // int x = 7;
+    // float x = 7.0f;
     inst = malloc(sizeof(struct Instruction));
     inst->type = INST_LET;
     params_allocate(inst, 2);
@@ -619,11 +661,11 @@ void write_code(struct State* state)
     value_set_string(inst->params[0]->value, "x");
 
     inst->params[1]->type = PARAM_LITERAL;
-    value_set_int(inst->params[1]->value, 7);
+    value_set_float(inst->params[1]->value, 7.0f);
 
     state->instructions[0] = inst;
 
-    // x = [l] * 2;
+    // x = [l] * 2.0f;
     inst = malloc(sizeof(struct Instruction));
     inst->type = INST_MUL;
 
@@ -636,11 +678,11 @@ void write_code(struct State* state)
     value_set_int(inst->params[1]->value, PTRN_LOCALS);
 
     inst->params[2]->type = PARAM_LITERAL;
-    value_set_int(inst->params[2]->value, 2);
+    value_set_float(inst->params[2]->value, 1.5f);
 
     state->instructions[1] = inst;
 
-    // x = [l] + 1;
+    // x = [l] + 1.0f;
     inst = malloc(sizeof(struct Instruction));
     inst->type = INST_ADD;
 
@@ -653,7 +695,7 @@ void write_code(struct State* state)
     value_set_int(inst->params[1]->value, PTRN_LOCALS);
 
     inst->params[2]->type = PARAM_LITERAL;
-    value_set_int(inst->params[2]->value, 1);
+    value_set_float(inst->params[2]->value, 1.0f);
 
     state->instructions[2] = inst;
 
@@ -700,11 +742,12 @@ struct State* setup_state(struct Context* ctx, int case_index)
     return ret;
 }
 
-struct Local* expect(struct State* state, struct Value* expected)
+struct Local* expect(struct Context* ctx, struct State* state,
+    struct Value* expected)
 {
     for (int k = 0; k < state->local_count; k++)
     {
-        if (!compare(state->locals[k]->value, expected))
+        if (!compare(ctx, state->locals[k]->value, expected))
             continue;
 
         return state->locals[k];
@@ -748,7 +791,7 @@ void check_cases(struct Context* ctx, struct State* base, struct Local* found)
             interpret(states[0]);
 
         bool success = true;
-        if (!compare(states[0]->ret, &ctx->cases[i].expected))
+        if (!compare(ctx, states[0]->ret, &ctx->cases[i].expected))
         {
             printf("FAIL: CASE %d\n", i);
             success = false;
@@ -807,7 +850,8 @@ void step(struct Context* ctx, struct State** states, int state_count)
         {
             interpret(varied[j]);
 
-            struct Local* found = expect(varied[j], &ctx->cases[0].expected);
+            struct Local* found = expect(
+                ctx, varied[j], &ctx->cases[0].expected);
 
             if (found)
             {
@@ -837,6 +881,8 @@ void step(struct Context* ctx, struct State** states, int state_count)
 int main(int argc, char* argv[])
 {
     struct Context ctx;
+    value_set_float(&ctx.precision, 0.000005f);
+
     ctx.solution_inst = NULL;
     ctx.solution_inst_count = 0;
 
@@ -849,13 +895,13 @@ int main(int argc, char* argv[])
 
     ctx.cases[0].input_values = malloc(ctx.input_count * sizeof(struct Value));
     
-    value_set_int(&ctx.cases[0].input_values[0], 1);
-    value_set_int(&ctx.cases[0].expected, 3);
+    value_set_float(&ctx.cases[0].input_values[0], 4.000001f);
+    value_set_float(&ctx.cases[0].expected, 7.0f);
     
     ctx.cases[1].input_values = malloc(ctx.input_count * sizeof(struct Value));
 
-    value_set_int(&ctx.cases[1].input_values[0], 3);
-    value_set_int(&ctx.cases[1].expected, 7);
+    value_set_float(&ctx.cases[1].input_values[0], 5.000001f);
+    value_set_float(&ctx.cases[1].expected, 8.5f);
 
     struct State** root = malloc(1 * sizeof(struct State*));
 
