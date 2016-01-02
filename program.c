@@ -222,7 +222,7 @@ void value_set_int(struct Value* value, int val)
 void value_set_string(struct Value* value, char* val)
 {
     value->type = TYPE_STRING;
-    value->size = strlen(val);
+    value->size = strlen(val) + 1;
     value->data = malloc(value->size);
     strncpy(value->data, val, value->size);
 }
@@ -325,8 +325,8 @@ void interpret(struct State* state)
 
     struct Instruction* inst = state->instructions[state->inst_ptr];
 
-    instruction_tostring(inst, buf, BUF_LEN);
-    printf("%d %s\n", state->inst_ptr, buf);
+    //instruction_tostring(inst, buf, BUF_LEN);
+    //printf("%d %s\n", state->inst_ptr, buf);
 
     switch (inst->type)
     {
@@ -588,7 +588,7 @@ struct State** vary(struct State* input, int* state_count)
 
 void write_code(struct State* state)
 {
-    state->instruction_count = 3;
+    state->instruction_count = 4;
     state->instructions = malloc(state->instruction_count *
                                  sizeof(struct Instruction*));
     state->instructions_owned = malloc(state->instruction_count * sizeof(bool));
@@ -625,7 +625,7 @@ void write_code(struct State* state)
 
     state->instructions[1] = inst;
 
-    // x = [l] + 1;
+    // x = [l] + 9;
     inst = malloc(sizeof(struct Instruction));
     inst->type = INST_ADD;
 
@@ -638,9 +638,26 @@ void write_code(struct State* state)
     value_set_int(inst->params[1]->value, PTRN_LOCALS);
 
     inst->params[2]->type = PARAM_LITERAL;
-    value_set_int(inst->params[2]->value, 1);
+    value_set_int(inst->params[2]->value, 9);
 
     state->instructions[2] = inst;
+
+    // x = [l] + 5;
+    inst = malloc(sizeof(struct Instruction));
+    inst->type = INST_ADD;
+
+    params_allocate(inst, 3);
+
+    inst->params[0]->type = PARAM_LABEL;
+    value_set_string(inst->params[0]->value, "x");
+
+    inst->params[1]->type = PARAM_PATTERN;
+    value_set_int(inst->params[1]->value, PTRN_LOCALS);
+
+    inst->params[2]->type = PARAM_LITERAL;
+    value_set_int(inst->params[2]->value, 5);
+
+    state->instructions[3] = inst;
 
     for (int i = 0; i < state->instruction_count; i++)
         state->instructions_owned[i] = true;
@@ -835,12 +852,12 @@ int main(int argc, char* argv[])
     ctx.cases[0].input_values = malloc(ctx.input_count * sizeof(struct Value));
     
     value_set_int(&ctx.cases[0].input_values[0], 1);
-    value_set_int(&ctx.cases[0].expected, 3);
+    value_set_int(&ctx.cases[0].expected, 4);
     
     ctx.cases[1].input_values = malloc(ctx.input_count * sizeof(struct Value));
 
     value_set_int(&ctx.cases[1].input_values[0], 5);
-    value_set_int(&ctx.cases[1].expected, 7);
+    value_set_int(&ctx.cases[1].expected, 8);
 
     struct State** root = malloc(1 * sizeof(struct State*));
 
