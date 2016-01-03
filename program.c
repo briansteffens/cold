@@ -464,6 +464,7 @@ void interpret(struct State* state)
         break;
     case INST_RET:
         state->ret = resolve(state, inst->params[0]);
+        state->inst_ptr = state->instruction_count;
         break;
     default:
         printf("Unrecognized instruction type: %d\n", inst->type);
