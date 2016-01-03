@@ -819,15 +819,18 @@ void check_cases(struct Context* ctx, struct State* base, struct Local* found)
     free(states);
 }
 
-void print_program(struct Instruction** inst, int count)
+void print_program(struct Instruction** inst, int count, bool line_nums)
 {
-    const int BUF_LEN = 100;
+    const int BUF_LEN = 255;
     char buf[BUF_LEN];
 
     for (int i = 0; i < count; i++)
     {
         instruction_tostring(inst[i], buf, BUF_LEN);
-        printf("%d %s\n", i, buf);
+        if (line_nums)
+            printf("%d %s\n", i, buf);
+        else
+            printf("%s\n", i, buf);
     }
 }
 
@@ -838,7 +841,8 @@ void step(struct Context* ctx, struct State** states, int state_count)
         if (states[i]->inst_ptr >= states[i]->instruction_count)
         {
             printf("---\n");
-            print_program(states[i]->instructions,states[i]->instruction_count);
+            print_program(states[i]->instructions,states[i]->instruction_count,
+                          true);
             printf("---\n");
 
             continue;
@@ -860,7 +864,8 @@ void step(struct Context* ctx, struct State** states, int state_count)
                 if (ctx->solution_inst)
                 {
                     printf("*** SOLUTION ***\n");
-                    print_program(ctx->solution_inst, ctx->solution_inst_count);
+                    print_program(ctx->solution_inst, ctx->solution_inst_count,
+                                  true);
                     break;
                 }
             }
