@@ -1,25 +1,21 @@
-HEADERS = cold.h interpreter.h solver.h
+HEADERS = src/cold.h src/interpreter.h src/solver.h
 
 default: solver
 
-cold.o: cold.c $(HEADERS)
-	gcc -c cold.c -o cold.o
+pre-build:
+	mkdir -p obj bin
 
-interpreter.o: interpreter.c $(HEADERS)
-	gcc -c interpreter.c -o interpreter.o
+cold.o: src/cold.c $(HEADERS)
+	gcc -c src/cold.c -o obj/cold.o
 
-solver.o: solver.c $(HEADERS)
-	gcc -c solver.c -o solver.o
+interpreter.o: src/interpreter.c $(HEADERS)
+	gcc -c src/interpreter.c -o obj/interpreter.o
 
-interpreter: interpreter.o cold.o
-	gcc interpreter.o cold.o -o interpreter
+solver.o: src/solver.c $(HEADERS)
+	gcc -c src/solver.c -o obj/solver.o
 
-solver: solver.o interpreter.o cold.o
-	gcc solver.o interpreter.o cold.o -o solver
+solver: pre-build solver.o interpreter.o cold.o
+	gcc obj/solver.o obj/interpreter.o obj/cold.o -o bin/solver
 
 clean:
-	-rm -f cold.o
-	-rm -f interpreter.o
-	-rm -f solver.o
-	-rm -f interpreter
-	-rm -f solver
+	rm -rf obj bin
