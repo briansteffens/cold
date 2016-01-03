@@ -1,13 +1,17 @@
-HEADERS = program.h
+HEADERS = cold.h interpreter.h
 
-default: program
+default: interpreter
 
-program.o: program.c $(HEADERS)
-	gcc -c program.c -o program.o
+cold.o: cold.c $(HEADERS)
+	gcc -c cold.c -o cold.o
 
-program: program.o
-	gcc program.o -o program
+interpreter.o: interpreter.c $(HEADERS)
+	gcc -c interpreter.c -o interpreter.o
+
+interpreter: interpreter.o cold.o
+	gcc interpreter.o cold.o -o interpreter
 
 clean:
-	-rm -f program.o
-	-rm -f program
+	-rm -f cold.o
+	-rm -f interpreter.o
+	-rm -f interpreter
