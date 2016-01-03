@@ -20,6 +20,18 @@ char* var_type_tostring(enum VarType input)
     }
 }
 
+enum VarType var_type_fromstring(char* input)
+{
+    if (strcmp(input, "int") == 0)
+        return TYPE_INT;
+    else if (strcmp(input, "float") == 0)
+        return TYPE_FLOAT;
+    else if (strcmp(input, "string") == 0)
+        return TYPE_STRING; 
+
+    printf("String [%s] cannot be parsed into a VarType\n", input);
+}
+
 char* param_type_tostring(enum ParamType input)
 {
     switch (input)
@@ -56,6 +68,29 @@ char* instruction_type_tostring(enum InstructionType input)
         return "prt";
     default:
         printf("InstructionType %d not supported\n", input);
+        exit(0);
+    }
+}
+
+enum InstructionType instruction_type_fromstring(char* input)
+{
+    if (strcmp(input, "let") == 0)
+        return INST_LET;
+    else if (strcmp(input, "add") == 0)
+        return INST_ADD;
+    else if (strcmp(input, "mul") == 0)
+        return INST_MUL;
+    else if (strcmp(input, "jmp") == 0)
+        return INST_JUMP;
+    else if (strcmp(input, "cmp") == 0)
+        return INST_CMP;
+    else if (strcmp(input, "ret") == 0)
+        return INST_RET;
+    else if (strcmp(input, "prt") == 0)
+        return INST_PRINT;
+    else
+    {
+        printf("Instruction type [%s] unrecognized\n", input);
         exit(0);
     }
 }

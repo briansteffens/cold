@@ -34,10 +34,12 @@ enum Patterns
 };
 
 char* var_type_tostring(enum VarType input);
+enum VarType var_type_fromstring(char* input);
 
 char* param_type_tostring(enum ParamType input);
 
 char* instruction_type_tostring(enum InstructionType input);
+enum InstructionType instruction_type_fromstring(char* input);
 
 struct Value
 {

@@ -1,0 +1,7 @@
+def main
+    arg x int
+    let r 0i
+    mul r [l] 2i
+    add r [l] 1i
+    prt r
+    ret r
