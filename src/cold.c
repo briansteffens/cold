@@ -95,6 +95,30 @@ enum InstructionType instruction_type_fromstring(char* input)
     }
 }
 
+void value_set_int(struct Value* value, int val)
+{
+    value->type = TYPE_INT;
+    value->size = sizeof(int);
+    value->data = malloc(value->size);
+    *((int*)value->data) = val;
+}
+
+void value_set_float(struct Value* value, float val)
+{
+    value->type = TYPE_FLOAT;
+    value->size = sizeof(float);
+    value->data = malloc(value->size);
+    *((float*)value->data) = val;
+}
+
+void value_set_string(struct Value* value, char* val)
+{
+    value->type = TYPE_STRING;
+    value->size = strlen(val) + 1;
+    value->data = malloc(value->size);
+    strncpy(value->data, val, value->size);
+}
+
 void value_tostring(struct Value* val, char* buf, int n)
 {
     switch (val->type)
@@ -111,6 +135,18 @@ void value_tostring(struct Value* val, char* buf, int n)
     default:
         printf("Unsupported ValueType %d\n", val->type);
         exit(0);
+    }
+}
+
+void params_allocate(struct Instruction* inst, int param_count)
+{
+    inst->params = malloc(param_count * sizeof(struct Param*));
+    inst->param_count = param_count;
+
+    for (int i = 0; i < param_count; i++)
+    {
+        inst->params[i] = malloc(sizeof(struct Param));
+        inst->params[i]->value = malloc(sizeof(struct Value));
     }
 }
 
@@ -135,4 +171,10 @@ void instruction_tostring(struct Instruction* input, char* buf, int n)
         param_tostring(input->params[i], param, 100);
         strncat(buf, param, n - strlen(buf) - strlen(param));
     }
+}
+
+void free_function(struct Function* func)
+{
+    free(func->args);
+    free(func->insts);
 }

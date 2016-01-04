@@ -1,3 +1,5 @@
 *.sw*p
 *.o
 solver
+bin/
+obj/

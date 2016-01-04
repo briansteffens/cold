@@ -3,31 +3,7 @@
 #include <string.h>
 
 #include "cold.h"
-#include "interpreter.h"
 #include "compiler.h"
-
-struct Argument
-{
-    char* name;
-    enum VarType type;
-};
-
-struct Function
-{
-    char* name;
-
-    struct Argument* args;
-    int arg_count;
-
-    struct Instruction* insts;
-    int inst_count;
-};
-
-void free_function(struct Function* func)
-{
-    free(func->args);
-    free(func->insts);
-}
 
 bool is_whitespace(char c)
 {
@@ -142,22 +118,65 @@ char** split(char* input, char separator, int* out_count)
     return ret;
 }
 
+void parse_param(struct Param* param, char* src)
+{
+    if (src[0] == 'i')
+    {
+        param->type = PARAM_LITERAL;
+        value_set_int(param->value, atoi(src + 1));
+    }
+    else if (src[0] == 'f')
+    {
+        param->type = PARAM_LITERAL;
+        // TODO: known issue that locale setting can mess this up
+        value_set_float(param->value, strtod(src + 1, NULL));
+    }
+    else if (src[0] == '$')
+    {
+        param->type = PARAM_LABEL;
+        value_set_string(param->value, src + 1);
+    }
+    else if (src[0] == '!')
+    {
+        param->type = PARAM_PATTERN;
+
+        int pattern_flags = 0;
+        int src_len = strlen(src);
+
+        for (int i = 1; i < src_len; i++)
+        {
+            switch (src[i])
+            {
+            case 'l':
+                pattern_flags |= PTRN_LOCALS;
+                break;
+            case 'c':
+                pattern_flags |= PTRN_CONSTANTS;
+                break;
+            default:
+                printf("Pattern [%s] unrecognized\n", src);
+                exit(0);
+            }
+        }
+
+        value_set_int(param->value, pattern_flags);
+    }
+    else
+    {
+        printf("Literal [%s] unrecognized\n", src);
+        exit(0);
+    }
+}
+
 void parse_instruction(struct Instruction* inst, char** parts, int part_count)
 {
     inst->type = instruction_type_fromstring(parts[0]);
 
-    switch (inst->type)
+    params_allocate(inst, part_count - 1);
+
+    for (int i = 0; i < part_count - 1; i++)
     {
-    case INST_LET:
-        params_allocate(inst, 2);
-
-        inst->params[0]->type = PARAM_LITERAL;
-
-        printf("hi\n");
-        break;
-    default:
-        printf("Instruction type [%d/%s] unrecognized\n", inst->type, parts[0]);
-        exit(0);
+        parse_param(inst->params[i], parts[i + 1]);
     }
 }
 
@@ -193,7 +212,7 @@ struct Function* parse(char** lines, int line_count, int* out_count)
             cur->args = realloc(cur->args,
                 cur->arg_count * sizeof(struct Argument));
 
-            cur->args[cur->arg_count - 1].name = strdup(parts[1]);
+            cur->args[cur->arg_count - 1].name = strdup(parts[1] + 1);
             cur->args[cur->arg_count - 1].type = var_type_fromstring(parts[2]);
         }
         else

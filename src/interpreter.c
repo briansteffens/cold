@@ -21,30 +21,6 @@ struct Local* get_local(struct State* state, const char* name)
     return state->locals[find_local(state, name)];
 }
 
-void value_set_int(struct Value* value, int val)
-{
-    value->type = TYPE_INT;
-    value->size = sizeof(int);
-    value->data = malloc(value->size);
-    *((int*)value->data) = val;
-}
-
-void value_set_float(struct Value* value, float val)
-{
-    value->type = TYPE_FLOAT;
-    value->size = sizeof(float);
-    value->data = malloc(value->size);
-    *((float*)value->data) = val;
-}
-
-void value_set_string(struct Value* value, char* val)
-{
-    value->type = TYPE_STRING;
-    value->size = strlen(val) + 1;
-    value->data = malloc(value->size);
-    strncpy(value->data, val, value->size);
-}
-
 struct Value* value_clone(const struct Value* src)
 {
     struct Value* ret = malloc(sizeof(struct Value));
@@ -81,18 +57,6 @@ void value_print(const struct Value* value)
     default:
         printf("UNRECOGNIZED TYPE");
         break;
-    }
-}
-
-void params_allocate(struct Instruction* inst, int param_count)
-{
-    inst->params = malloc(param_count * sizeof(struct Param*));
-    inst->param_count = param_count;
-
-    for (int i = 0; i < param_count; i++)
-    {
-        inst->params[i] = malloc(sizeof(struct Param));
-        inst->params[i]->value = malloc(sizeof(struct Value));
     }
 }
 

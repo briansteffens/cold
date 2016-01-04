@@ -28,9 +28,8 @@ enum InstructionType
 
 enum Patterns
 {
-    PTRN_INPUTS = 1
-,   PTRN_LOCALS = 2
-,   PTRN_CONSTANTS = 4
+    PTRN_LOCALS = 1
+,   PTRN_CONSTANTS = 2
 };
 
 char* var_type_tostring(enum VarType input);
@@ -49,6 +48,9 @@ struct Value
 };
 
 void value_tostring(struct Value* val, char* buf, int n);
+void value_set_string(struct Value* value, char* val);
+void value_set_int(struct Value* value, int val);
+void value_set_float(struct Value* value, float val);
 
 struct Local
 {
@@ -70,6 +72,8 @@ struct Instruction
     struct Param** params;
     int param_count;
 };
+
+void params_allocate(struct Instruction* inst, int param_count);
 
 void instruction_tostring(struct Instruction* input, char* buf, int n);
 
@@ -113,3 +117,22 @@ struct Context
 
     struct Value precision;
 };
+
+struct Argument
+{
+    char* name;
+    enum VarType type;
+};
+
+struct Function
+{
+    char* name;
+
+    struct Argument* args;
+    int arg_count;
+
+    struct Instruction* insts;
+    int inst_count;
+};
+
+void free_function(struct Function* func);

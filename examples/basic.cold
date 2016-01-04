@@ -1,7 +1,7 @@
 def main
-    arg x int
-    let r 0i
-    mul r [l] 2i
-    add r [l] 1i
-    prt r
-    ret r
+    arg $x int
+    let $r i0
+    mul $r !l i2
+    add $r !l i1
+    prt $r
+    ret $r
