@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "cold.h"
 #include "compiler.h"
 
 bool is_whitespace(char c)
@@ -231,36 +230,37 @@ struct Function* parse(char** lines, int line_count, int* out_count)
     return ret;
 }
 
-int main(int argc, char *argv[])
+/* 
+ *  Parse contents of [filename] into an array of functions [out_functions]
+ *
+ *  [out_functions] is created with malloc so must be freed by the caller
+ *
+ *  returns: the number of functions parsed or a negative number on error
+ */
+int parse_file(char* filename, struct Function** out_functions)
 {
-    if (argc != 2)
-    {
-        printf("usage: coldc source_file\n");
-        return 0;
-    }
-
-    FILE* file = fopen(argv[1], "r");
+    FILE* file = fopen(filename, "r");
 
     if (file == 0)
     {
-        printf("Failed to open source file: %s\n", argv[1]);
-        return 0;
+        printf("Failed to open source file [%s]\n", filename);
+        return -1;
     }
 
     int line_count;
     char** lines = read_lines(file, &line_count);
 
-    int function_count;
-    struct Function* functions = parse(lines, line_count, &function_count);
-
-    for (int i = 0; i < function_count; i++)
-    {
-        printf("FUNC %d %s\n", &functions[i], functions[i].name);
-        free_function(&functions[i]);
-    }
-
-    free(functions);
-
     fclose(file);
-    return 0;
+
+    int function_count;
+    *out_functions = parse(lines, line_count, &function_count);
+
+    for (int i = 0; i < line_count; i++)
+    {
+        free(lines[i]);
+    }
+    
+    free(lines);
+
+    return function_count;
 }
