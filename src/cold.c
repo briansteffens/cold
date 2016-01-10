@@ -66,6 +66,8 @@ char* instruction_type_tostring(enum InstructionType input)
         return "ret";
     case INST_PRINT:
         return "prt";
+    case INST_NEXT:
+        return "nxt";
     default:
         printf("InstructionType %d not supported\n", input);
         exit(0);
@@ -88,6 +90,8 @@ enum InstructionType instruction_type_fromstring(char* input)
         return INST_RET;
     else if (strcmp(input, "prt") == 0)
         return INST_PRINT;
+    else if (strcmp(input, "nxt") == 0)
+        return INST_NEXT;
     else
     {
         printf("Instruction type [%s] unrecognized\n", input);
@@ -152,10 +156,39 @@ void params_allocate(struct Instruction* inst, int param_count)
 
 void param_tostring(struct Param* p, char* buf, int n)
 {
+    char prefix;
+
+    switch (p->type)
+    {
+    case PARAM_LITERAL:
+        switch (p->value->type)
+        {
+        case TYPE_INT:
+            prefix = 'i';
+            break;
+        case TYPE_FLOAT:
+            prefix = 'f';
+            break;
+        default:
+            printf("Unrecognized value type %d\n", p->value->type);
+            exit(1);
+        }
+        break;
+    case PARAM_LABEL:
+        prefix = '$';
+        break;
+    case PARAM_PATTERN:
+        prefix = '!';
+        break;
+    default:
+        printf("Unrecognized param type %d\n", p->type);
+        exit(1);
+    }
+
     char val[100];
     value_tostring(p->value, val, 100);
 
-    snprintf(buf, n, "%s", val);
+    snprintf(buf, n, "%c%s", prefix, val);
 }
 
 void instruction_tostring(struct Instruction* input, char* buf, int n)

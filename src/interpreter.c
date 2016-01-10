@@ -111,6 +111,21 @@ void dump_locals(struct State* state)
                *((int*)state->locals[i]->value->data));
 }
 
+void print_program(struct Instruction** inst, int count, bool line_nums)
+{
+    const int BUF_LEN = 255;
+    char buf[BUF_LEN];
+
+    for (int i = 0; i < count; i++)
+    {
+        instruction_tostring(inst[i], buf, BUF_LEN);
+        if (line_nums)
+            printf("%d %s\n", i, buf);
+        else
+            printf("%s\n", i, buf);
+    }
+}
+
 void interpret(struct State* state)
 {
     const int BUF_LEN = 100;
@@ -120,7 +135,12 @@ void interpret(struct State* state)
 
     //instruction_tostring(inst, buf, BUF_LEN);
     //printf("%d %s\n", state->inst_ptr, buf);
-
+    /*
+    printf("\n\n\n****\n");
+    print_program(state->instructions, state->instruction_count, true);
+    printf("****\n\n\n");
+    printf("inst_ptr: %d\n", state->inst_ptr);
+    */
     switch (inst->type)
     {
     case INST_LET:
@@ -283,19 +303,4 @@ struct State* setup_state(struct Context* ctx, int case_index)
     ret->ret = NULL;
 
     return ret;
-}
-
-void print_program(struct Instruction** inst, int count, bool line_nums)
-{
-    const int BUF_LEN = 255;
-    char buf[BUF_LEN];
-
-    for (int i = 0; i < count; i++)
-    {
-        instruction_tostring(inst[i], buf, BUF_LEN);
-        if (line_nums)
-            printf("%d %s\n", i, buf);
-        else
-            printf("%s\n", i, buf);
-    }
 }

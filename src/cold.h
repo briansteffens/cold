@@ -24,6 +24,7 @@ enum InstructionType
 ,   INST_CMP
 ,   INST_RET
 ,   INST_PRINT
+,   INST_NEXT
 };
 
 enum Patterns
@@ -71,6 +72,7 @@ struct Instruction
     enum InstructionType type;
     struct Param** params;
     int param_count;
+    int pattern_depth;
 };
 
 void params_allocate(struct Instruction* inst, int param_count);
@@ -104,6 +106,12 @@ struct Case
     struct Value expected;
 };
 
+struct Pattern
+{
+    struct Instruction** insts;
+    int inst_count;
+};
+
 struct Context
 {
     char** input_names;
@@ -116,6 +124,15 @@ struct Context
     int solution_inst_count;
 
     struct Value precision;
+
+    int depth;
+
+    struct Pattern** patterns;
+    int pattern_count;
+    bool** pattern_mask;
+
+    struct Value* constants;
+    int constant_count;
 };
 
 struct Argument

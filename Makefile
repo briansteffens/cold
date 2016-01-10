@@ -1,4 +1,4 @@
-HEADERS = src/cold.h src/interpreter.h src/solver.h src/compiler.h
+HEADERS = src/cold.h src/interpreter.h src/solver.h src/compiler.h src/generator.h
 
 default: cli
 
@@ -17,11 +17,14 @@ solver.o: src/solver.c $(HEADERS)
 compiler.o: src/compiler.c $(HEADERS)
 	gcc -c src/compiler.c -o obj/compiler.o
 
+generator.o: src/generator.c $(HEADERS)
+	gcc -c src/generator.c -o obj/generator.o
+
 cli.o: src/cli.c $(HEADERS)
 	gcc -c src/cli.c -o obj/cli.o
 
-cli: pre-build cold.o interpreter.o solver.o compiler.o cli.o
-	gcc obj/compiler.o obj/interpreter.o obj/cold.o obj/solver.o obj/cli.o -o bin/cold
+cli: pre-build cold.o interpreter.o solver.o compiler.o generator.o cli.o
+	gcc obj/compiler.o obj/interpreter.o obj/cold.o obj/solver.o obj/generator.o obj/cli.o -o bin/cold
 
 clean:
 	rm -rf obj bin

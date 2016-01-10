@@ -4,11 +4,13 @@
 
 #include "cold.h"
 #include "interpreter.h"
+#include "compiler.h"
 
 struct State* state_fork(struct State* orig)
 {
     struct State* ret = malloc(sizeof(struct State));
-
+    //printf("FORK %d\n", ret);
+    // Shallow copy locals to the new state
     ret->local_count = orig->local_count;
     ret->locals_owned = malloc(ret->local_count * sizeof(bool));
     ret->locals = malloc(ret->local_count * sizeof(struct Local*));
@@ -19,6 +21,7 @@ struct State* state_fork(struct State* orig)
         ret->locals_owned[i] = false;
     }
 
+    // Shallow copy instructions to the new state
     ret->instruction_count = orig->instruction_count;
     ret->instructions_owned = malloc(ret->instruction_count * sizeof(bool));
     ret->instructions = malloc(ret->instruction_count *
@@ -31,20 +34,6 @@ struct State* state_fork(struct State* orig)
     }
 
     ret->inst_ptr = orig->inst_ptr;
-
-    return ret;
-}
-
-int count_patterns(struct State* state, struct Param* param)
-{
-    int ret = 0;
-
-    int flags = *((int*)param->value->data);
-
-    if (flags & PTRN_LOCALS)
-        ret += state->local_count;
-
-    printf("%d\n", ret);
 
     return ret;
 }
@@ -67,18 +56,22 @@ struct Instruction* instruction_clone(struct Instruction* orig)
     return ret;
 }
 
-struct Param** vary_params(struct State* state, struct Param* pattern,
-                           int* output_count)
+// Calculate all possible replacement params for a param pattern
+struct Param** vary_params(struct Context* ctx, struct State* state,
+    struct Param* pattern, int* output_count)
 {
     int flags = *((int*)pattern->value->data);
 
     int count = 0;
     if (flags & PTRN_LOCALS)
         count += state->local_count;
+    if (flags & PTRN_CONSTANTS)
+        count += ctx->constant_count;
 
     struct Param** ret = malloc(count * sizeof(struct Param*));
 
     int current = 0;
+
     if (flags & PTRN_LOCALS)
         for (int i = 0; i < state->local_count; i++)
         {
@@ -89,33 +82,53 @@ struct Param** vary_params(struct State* state, struct Param* pattern,
             current++;
         }
 
+    if (flags & PTRN_CONSTANTS)
+        for (int i = 0; i < ctx->constant_count; i++)
+        {
+            ret[current] = malloc(sizeof(struct Param));
+            ret[current]->value = value_clone(&ctx->constants[i]);
+            ret[current]->type = PARAM_LITERAL;
+            current++;
+        }
+
     *output_count = current;
     return ret;
 }
 
-struct Instruction** vary_instructions(
+struct Instruction** vary_instructions(struct Context* ctx,
     struct State* input, struct Instruction* inst, int* instruction_count)
 {
+    // TODO: why do we allocate for 1 with a count of 0?
     struct Instruction** ret = malloc(1 * sizeof(struct Instruction*));
     *instruction_count = 0;
 
+    // Loop through the parameters in the instruction checking for patterns
     for (int i = 0; i < inst->param_count; i++)
     {
+        // Non-patterns don't need to be replaced (varied)
         if (inst->params[i]->type != PARAM_PATTERN)
             continue;
 
+        // Get the set of possible params to replace the pattern param with
         int param_count = 0;
-        struct Param** varied = vary_params(input, inst->params[i],
-                                            &param_count);
+        struct Param** varied = vary_params(ctx, input, inst->params[i],
+            &param_count);
+
+        // For each possible param, clone the current instruction and
+        // substitute the pattern param for each variance
         for (int p = 0; p < param_count; p++)
         {
             struct Instruction* new_inst = instruction_clone(inst);
             new_inst->params[i] = varied[p];
 
+            // Since there can be multiple pattern params in an instruction,
+            // recur on each new clone to generate any further variances
             int recur_count = 0;
-            struct Instruction** recurs = vary_instructions(input, new_inst,
-                                                            &recur_count);
+            struct Instruction** recurs = vary_instructions(ctx, input,
+                new_inst, &recur_count);
 
+            // Combine the result of the recursion with any results from this
+            // run of the function
             ret = realloc(ret, (*instruction_count + recur_count) *
                           sizeof(struct Instruction*));
 
@@ -127,14 +140,13 @@ struct Instruction** vary_instructions(
 
             free(recurs);
         }
+
         free(varied);
 
         break;
     }
 
-    // TODO: remove? this should never happen but just in case..
-    assert(*instruction_count != 1);
-
+    // If there were no variances found, return the original input
     if (*instruction_count == 0)
     {
         ret = realloc(ret, 1 * sizeof(struct Instruction*));
@@ -145,10 +157,10 @@ struct Instruction** vary_instructions(
     return ret;
 }
 
-struct State** vary(struct State* input, int* state_count)
+struct State** vary(struct Context* ctx, struct State* input, int* state_count)
 {
-    struct Instruction** insts = vary_instructions(
-        input, input->instructions[input->inst_ptr], state_count);
+    struct Instruction** insts = vary_instructions(ctx, input,
+        input->instructions[input->inst_ptr], state_count);
 
     // If the instruction was varied (forked into multiple instructions),
     // then they are new copies and the new forked states "own" them.
@@ -162,6 +174,7 @@ struct State** vary(struct State* input, int* state_count)
         ret[i] = state_fork(input);
         ret[i]->instructions[ret[i]->inst_ptr] = insts[i];
         ret[i]->instructions_owned[ret[i]->inst_ptr] = did_vary;
+        print_program(ret[i]->instructions, ret[i]->instruction_count, true);
     }
 
     free(insts);
@@ -169,6 +182,7 @@ struct State** vary(struct State* input, int* state_count)
     return ret;
 }
 
+// Check a state's locals for an expected value
 struct Local* expect(struct Context* ctx, struct State* state,
     struct Value* expected)
 {
@@ -183,6 +197,10 @@ struct Local* expect(struct Context* ctx, struct State* state,
     return NULL;
 }
 
+// Check all (except the first, which is assumed to have already been checked
+// by the caller) cases against a state program. If the same local in all
+// case executions finds the expected output of its case, the program contained
+// in state is considered a solution to the context being run.
 void check_cases(struct Context* ctx, struct State* base, struct Local* found)
 {
     struct State** states = malloc(sizeof(struct State*));
@@ -245,11 +263,175 @@ void check_cases(struct Context* ctx, struct State* base, struct Local* found)
     free(states);
 }
 
+// Remove an instruction from a state's program at the given index
+void remove_inst(struct State* state, int inst_index)
+{
+    // Free the instruction memory if this state owns it
+    if (state->instructions_owned[inst_index])
+    {
+        instruction_free(state->instructions[inst_index]);
+        free(state->instructions[inst_index]);
+    }
+
+    // Shuffle instruction data after the deleted instruction down one
+    for (int i = inst_index; i < state->instruction_count - 1; i++)
+    {
+        state->instructions[i] = state->instructions[i + 1];
+        state->instructions_owned[i] = state->instructions_owned[i + 1];
+    }
+
+    // Shrink the instruction set
+    state->instruction_count--;
+    state->instructions = realloc(state->instructions,
+        state->instruction_count * sizeof(struct Instruction*));
+    state->instructions_owned = realloc(state->instructions_owned,
+        state->instruction_count * sizeof(bool));
+}
+
+// Bounds-check a state's instruction pointer
+bool is_execution_finished(struct State* state)
+{
+    return state->inst_ptr >= state->instruction_count;
+}
+
+// Insert the instructions from a code pattern into a state's instruction list
+// at the state's current instruction pointer
+void insert_pattern(struct Pattern* pattern, struct State* state, int depth)
+{
+    int orig_inst_count = state->instruction_count;
+
+    // Allocate space in the state's instruction set for the new instructions
+    state->instruction_count += pattern->inst_count;
+    state->instructions = realloc(state->instructions,
+        state->instruction_count * sizeof(struct Instruction*));
+    state->instructions_owned = realloc(state->instructions_owned,
+        state->instruction_count * sizeof(bool));
+
+    // Move instructions after the insertion point to the end of the array
+    for (int i = orig_inst_count - 1; i > state->inst_ptr; i--)
+    {
+        int n = pattern->inst_count + 1;
+
+        state->instructions[n] = state->instructions[i];
+        state->instructions_owned[n] = state->instructions_owned[i];
+    }
+
+    // Copy the pattern instructions into the state
+    for (int i = 0; i < pattern->inst_count; i++)
+    {
+        int n = state->inst_ptr + i;
+
+        state->instructions[n] = instruction_clone(pattern->insts[i]);
+        state->instructions[n]->pattern_depth = depth;
+        state->instructions_owned[n] = true;
+    }
+}
+
+// Replace a "NEXT" instruction with all code patterns in the pattern mask
+// at the current depth level
+struct State** vary_patterns(struct Context* ctx, struct State* state,
+    int* patterned_count)
+{
+    // Get the next pattern depth level
+    int depth = state->instructions[state->inst_ptr]->pattern_depth + 1;
+
+    // Setup output values
+    *patterned_count = 0;
+    struct State** ret = malloc(0);
+
+    // Remove the "NEXT" instruction being replaced
+    remove_inst(state, state->inst_ptr);
+
+    // Max depth passed, no more patterns. Return just the current state.
+    if (depth >= ctx->depth)
+    {
+        *patterned_count = 1;
+        ret = realloc(ret, *patterned_count * sizeof(struct State*));
+        ret[0] = state;
+        return ret;
+    }
+
+    // Set the number of state forks to the number of 'true' values in the
+    // pattern mask at this depth.
+    for (int i = 0; i < ctx->pattern_count; i++)
+    {
+        *patterned_count += ctx->pattern_mask[depth][i];
+    }
+
+    ret = realloc(ret, *patterned_count * sizeof(struct State*));
+
+    // Fork the state for each pattern in the pattern mask at this depth and
+    // insert that pattern in place of the removed "NEXT" instruction
+    int i = 0;
+    for (int p = 0; p < ctx->pattern_count; p++)
+    {
+        if (!ctx->pattern_mask[depth][p])
+            continue;
+
+        ret[i] = state_fork(state);
+
+        insert_pattern(ctx->patterns[p], ret[i], depth);
+
+        i++;
+    }
+
+    return ret;
+}
+
+// Forward declaration because step and step_vary are mutually-dependent
+void step(struct Context* ctx, struct State** states, int state_count);
+
+// Fork the state for each possible variance of the next instruction and
+// execute those new instructions.
+void step_vary(struct Context* ctx, struct State* state)
+{
+    if (is_execution_finished(state))
+        return;
+
+    int varied_count = 0;
+    struct State** varied = vary(ctx, state, &varied_count);
+
+    for (int j = 0; j < varied_count; j++)
+    {
+        // Interpret the varied line
+        interpret(varied[j]);
+
+        // Check for the expected case output
+        struct Local* found = expect(ctx, varied[j], &ctx->cases[0].expected);
+
+        if (!found)
+            continue;
+
+        // We found a program that solves the first case. Try the other cases
+        // to see if the program solves those cases too.
+        check_cases(ctx, varied[j], found);
+
+        if (!ctx->solution_inst)
+            continue;
+
+        // Found a solution to all cases.
+        printf("*** SOLUTION ***\n");
+        print_program(ctx->solution_inst, ctx->solution_inst_count, true);
+        break;
+    }
+
+    // If no solution has been found yet, continue recursion
+    if (!ctx->solution_inst)
+        step(ctx, varied, varied_count);
+
+    // Free forked states
+    for (int j = 0; j < varied_count; j++)
+        free_state(varied[j]);
+
+    free(varied);
+}
+
 void step(struct Context* ctx, struct State** states, int state_count)
 {
     for (int i = 0; i < state_count; i++)
     {
-        if (states[i]->inst_ptr >= states[i]->instruction_count)
+        // End interpretation if the instruction pointer is out of bounds
+        if (is_execution_finished(states[i]))
         {
             printf("---\n");
             print_program(states[i]->instructions,states[i]->instruction_count,
@@ -259,38 +441,100 @@ void step(struct Context* ctx, struct State** states, int state_count)
             continue;
         }
 
-        int varied_count = 0;
-        struct State** varied = vary(states[i], &varied_count);
-
-        for (int j = 0; j < varied_count; j++)
+        // If the instruction to be interpreted is a "NEXT", it needs to be
+        // replaced with patterns.
+        if (states[i]->instructions[states[i]->inst_ptr]->type == INST_NEXT)
         {
-            interpret(varied[j]);
+            // Fork the state for each pattern in the mask
+            int patterned_count = 0;
+            struct State** patterned = vary_patterns(ctx, states[i],
+                &patterned_count);
 
-            struct Local* found = expect(
-                ctx, varied[j], &ctx->cases[0].expected);
-
-            if (found)
+            // Run the first line in the newly-inserted pattern in each fork
+            for (int j = 0; j < patterned_count; j++)
             {
-                check_cases(ctx, varied[j], found);
+                step_vary(ctx, patterned[j]);
+
+                // End execution if a solution was found
                 if (ctx->solution_inst)
-                {
-                    printf("*** SOLUTION ***\n");
-                    print_program(ctx->solution_inst, ctx->solution_inst_count,
-                                  true);
                     break;
-                }
             }
+
+            // Free pattern forked states
+            for (int j = 0; j < patterned_count; j++)
+            {
+                // Only free the forked state if it's actually a new fork.
+                // vary_patterns will return the passed-in state if no variance
+                // was performed, in which case this function didn't "create"
+                // the fork, so we shouldn't free it here.
+                if (patterned[j] != states[i])
+                    free_state(patterned[j]);
+            }
+
+            free(patterned);
         }
 
-        if (!ctx->solution_inst)
-            step(ctx, varied, varied_count);
-
-        for (int j = 0; j < varied_count; j++)
-            free_state(varied[j]);
-
-        free(varied);
-
+        // End execution if a solution was found
         if (ctx->solution_inst)
             break;
     }
+}
+
+// Load a pattern file into a context
+bool add_pattern(struct Context* ctx, const char* filename)
+{
+    FILE* file = fopen(filename, "r");
+
+    if (file == 0)
+    {
+        printf("Failed to open pattern file [%s]\n", filename);
+        return false;
+    }
+
+    int line_count;
+    char** lines = read_lines(file, &line_count);
+
+    fclose(file);
+
+    ctx->pattern_count++;
+    ctx->patterns = realloc(ctx->patterns,
+        ctx->pattern_count * sizeof(struct Pattern*));
+
+    struct Pattern* ret = malloc(sizeof(struct Pattern));
+    ret->inst_count = 0;
+    ret->insts = malloc(ret->inst_count * sizeof(struct Instruction));
+
+    for (int i = 0; i < line_count; i++)
+    {
+        int part_count;
+        char** parts = split(lines[i], ' ', &part_count);
+
+        ret->inst_count++;
+        ret->insts = realloc(ret->insts,
+            ret->inst_count * sizeof(struct Instruction*));
+        ret->insts[ret->inst_count - 1] = malloc(sizeof(struct Instruction));
+
+        parse_instruction(ret->insts[ret->inst_count - 1], parts, part_count);
+
+        free(parts);
+        free(lines[i]);
+    }
+
+    free(lines);
+
+    ctx->patterns[ctx->pattern_count - 1] = ret;
+
+    return true;
+}
+
+void free_pattern(struct Pattern* pattern)
+{
+    for (int i = 0; i < pattern->inst_count; i++)
+    {
+        instruction_free(pattern->insts[i]);
+        free(pattern->insts[i]);
+    }
+
+    free(pattern->insts);
+    free(pattern);
 }

@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "cold.h"
 #include "compiler.h"
 
 bool is_whitespace(char c)

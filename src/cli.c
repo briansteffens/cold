@@ -1,22 +1,27 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
+#include "cold.h"
+#include "interpreter.h"
 #include "compiler.h"
-
-int main(int argc, char *argv[])
+#include "solver.h"
+#include "generator.h"
+/*
+int handle_run(int argc, char* argv[])
 {
-    if (argc != 2)
+    if (argc != 1)
     {
-        printf("usage: coldc source_file\n");
+        printf("usage: coldc run SOURCE_FILE\n");
         return 0;
     }
 
     struct Function* functions;
-    int function_count = parse_file(argv[1], &functions);
+    int function_count = parse_file(argv[0], &functions);
 
     if (function_count < 0)
     {
-        printf("Failed to parse source file [%s]\n", argv[1]);
+        printf("Failed to parse source file [%s]\n", argv[0]);
         return 1;
     }
 
@@ -31,6 +36,38 @@ int main(int argc, char *argv[])
     return 0;
 }
 
+int handle_solve(int argc, char* argv[])
+{
+    return 0;
+}
+
+int handle_generate(int argc, char* argv[])
+{
+    generate();
+    return 0;
+}
+
+int main(int argc, char *argv[])
+{
+    if (argc > 1 && strcmp(argv[1], "run") == 0)
+    {
+        return handle_run(argc - 2, argv + 2);
+    }
+
+    if (argc > 1 && strcmp(argv[1], "solve") == 0)
+    {
+        return handle_solve(argc - 2, argv + 2);
+    }
+
+    if (argc > 1 && strcmp(argv[1], "generate") == 0)
+    {
+        return handle_generate(argc - 2, argv + 2);
+    }
+
+    printf("usage: cold [run|solve]\n");
+    return 1;
+}
+*/
 /*
 void write_code(struct State* state)
 {
@@ -91,47 +128,111 @@ void write_code(struct State* state)
     for (int i = 0; i < state->instruction_count; i++)
         state->instructions_owned[i] = true;
 }
-
+*/
 int main(int argc, char* argv[])
 {
     struct Context ctx;
+
+    // Float precision
     value_set_float(&ctx.precision, 0.000005f);
+
+    // Load patterns
+    ctx.pattern_count = 0;
+    ctx.patterns = malloc(0);
+
+    add_pattern(&ctx, "patterns/add.pattern");
+    add_pattern(&ctx, "patterns/mul.pattern");
+
+    // Setup pattern mask
+    ctx.depth = 2;
+    ctx.pattern_mask = malloc(ctx.depth * sizeof(bool*));
+
+    for (int i = 0; i < ctx.depth; i++)
+    {
+        ctx.pattern_mask[i] = malloc(ctx.pattern_count * sizeof(bool));
+        for (int j = 0; j < ctx.pattern_count; j++)
+        {
+            ctx.pattern_mask[i][j] = true;
+            printf("%d %d\n", i, j);
+        }
+    }
+
+    // Setup context constants
+    ctx.constant_count = 2;
+    ctx.constants = malloc(ctx.constant_count * sizeof(struct Value));
+    value_set_int(&ctx.constants[0], 1);
+    value_set_int(&ctx.constants[1], 2);
 
     ctx.solution_inst = NULL;
     ctx.solution_inst_count = 0;
 
+    // Function inputs
     ctx.input_count = 1;
     ctx.input_names = malloc(ctx.input_count * sizeof(char*));
     ctx.input_names[0] = "z";
-    
+
+    // Setup cases
     ctx.case_count = 2;
     ctx.cases = malloc(ctx.case_count * sizeof(struct Case));
 
+    // Case 0
     ctx.cases[0].input_values = malloc(ctx.input_count * sizeof(struct Value));
-    
-    value_set_float(&ctx.cases[0].input_values[0], 4.000001f);
-    value_set_float(&ctx.cases[0].expected, 7.0f);
-    
+
+    value_set_int(&ctx.cases[0].input_values[0], 3);
+    value_set_int(&ctx.cases[0].expected, 7);
+    //value_set_float(&ctx.cases[0].input_values[0], 4.000001f);
+    //value_set_float(&ctx.cases[0].expected, 7.0f);
+
+    // Case 1
     ctx.cases[1].input_values = malloc(ctx.input_count * sizeof(struct Value));
 
-    value_set_float(&ctx.cases[1].input_values[0], 5.000001f);
-    value_set_float(&ctx.cases[1].expected, 8.5f);
+    value_set_int(&ctx.cases[1].input_values[0], 4);
+    value_set_int(&ctx.cases[1].expected, 9);
+    //value_set_float(&ctx.cases[1].input_values[0], 5.000001f);
+    //value_set_float(&ctx.cases[1].expected, 8.5f);
 
+    // Setup root state
     struct State** root = malloc(1 * sizeof(struct State*));
 
     root[0] = setup_state(&ctx, 0);
 
-    write_code(root[0]);
+    root[0]->instruction_count = 1;
+    root[0]->instructions = malloc(
+        root[0]->instruction_count * sizeof(struct Instruction*));
+    root[0]->instructions_owned = malloc(
+        root[0]->instruction_count * sizeof(bool));
+
+    // One "NEXT" instruction - a placeholder for code patterns
+    root[0]->instructions[0] = malloc(sizeof(struct Instruction));
+    root[0]->instructions[0]->type = INST_NEXT;
+    root[0]->instructions[0]->pattern_depth = -1;
+    params_allocate(root[0]->instructions[0], 0);
+
     root[0]->inst_ptr = 0;
 
+    // gogogo
     step(&ctx, root, 1);
 
+    // Free the root state
     free_state(root[0]);
     free(root);
 
+    // Free the context
     free(ctx.input_names);
+
+    for (int i = 0; i < ctx.constant_count; i++)
+        value_free(&ctx.constants[i]);
+    free(ctx.constants);
+
     for (int i = 0; i < ctx.case_count; i++)
         free(ctx.cases[i].input_values);
     free(ctx.cases);
+
+    for (int i = 0; i < ctx.pattern_count; i++)
+        free_pattern(ctx.patterns[i]);
+    free(ctx.patterns);
+
+    for (int i = 0; i < ctx.depth; i++)
+        free(ctx.pattern_mask[i]);
+    free(ctx.pattern_mask);
 }
-*/
