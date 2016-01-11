@@ -100,6 +100,11 @@ bool compare(struct Context* ctx, struct Value* left, struct Value* right)
     {
         printf("compare() can't support these types: %d == %d\n",
             left->type, right->type);
+        char buf[255];
+        value_tostring(left, buf, 255);
+        printf("\tleft: %s\n", buf);
+        value_tostring(right, buf, 255);
+        printf("\tright: %s\n", buf);
         exit(0);
     }
 }
@@ -133,8 +138,8 @@ void interpret(struct State* state)
 
     struct Instruction* inst = state->instructions[state->inst_ptr];
 
-    //instruction_tostring(inst, buf, BUF_LEN);
-    //printf("\t%d %s\n", state->inst_ptr, buf);
+    instruction_tostring(inst, buf, BUF_LEN);
+    printf("\tINTR: %d %d %s\n", state, state->inst_ptr, buf);
     /*
     printf("\n\n\n****\n");
     print_program(state->instructions, state->instruction_count, true);
@@ -152,10 +157,7 @@ void interpret(struct State* state)
 
         struct Local* local = malloc(sizeof(struct Local));
 
-        int len = strlen(inst->params[0]->value->data);
-        local->name = malloc(len);
-        strncpy(local->name, inst->params[0]->value->data, len);
-
+        local->name = strdup(inst->params[0]->value->data);
         local->value = value_clone(inst->params[1]->value);
 
         state->locals[state->local_count - 1] = local;

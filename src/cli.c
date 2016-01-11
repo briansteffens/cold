@@ -134,17 +134,18 @@ int main(int argc, char* argv[])
     struct Context ctx;
 
     // Float precision
-    value_set_float(&ctx.precision, 0.000005f);
+    value_set_float(&ctx.precision, 10000.0f);
 
     // Load patterns
     ctx.pattern_count = 0;
     ctx.patterns = malloc(0);
 
+    add_pattern(&ctx, "patterns/let.pattern");
     add_pattern(&ctx, "patterns/add.pattern");
     add_pattern(&ctx, "patterns/mul.pattern");
 
     // Setup pattern mask
-    ctx.depth = 2;
+    ctx.depth = 3;
     ctx.pattern_mask = malloc(ctx.depth * sizeof(bool*));
 
     for (int i = 0; i < ctx.depth; i++)
@@ -158,12 +159,12 @@ int main(int argc, char* argv[])
     }
 
     // Setup context constants
-    ctx.constant_count = 2;
+    ctx.constant_count = 1;
     ctx.constants = malloc(ctx.constant_count * sizeof(struct Value));
     //value_set_int(&ctx.constants[0], 1);
     //value_set_int(&ctx.constants[1], 2);
-    value_set_float(&ctx.constants[0], 1.5f);
-    value_set_float(&ctx.constants[1], 1.0f);
+    value_set_float(&ctx.constants[0], 300000000.0f); // speed of light
+    //value_set_float(&ctx.constants[1], 1.0f);
 
     ctx.solution_inst = NULL;
     ctx.solution_inst_count = 0;
@@ -182,16 +183,16 @@ int main(int argc, char* argv[])
 
     //value_set_int(&ctx.cases[0].input_values[0], 3);
     //value_set_int(&ctx.cases[0].expected, 7);
-    value_set_float(&ctx.cases[0].input_values[0], 4.000001f);
-    value_set_float(&ctx.cases[0].expected, 7.0f);
+    value_set_float(&ctx.cases[0].input_values[0], 1.0f); // kg
+    value_set_float(&ctx.cases[0].expected, 90000000000000000.0f); // joules
 
     // Case 1
     ctx.cases[1].input_values = malloc(ctx.input_count * sizeof(struct Value));
 
     //value_set_int(&ctx.cases[1].input_values[0], 4);
     //value_set_int(&ctx.cases[1].expected, 9);
-    value_set_float(&ctx.cases[1].input_values[0], 5.000001f);
-    value_set_float(&ctx.cases[1].expected, 8.5f);
+    value_set_float(&ctx.cases[1].input_values[0], 86.18f); // kg
+    value_set_float(&ctx.cases[1].expected, 7756200000000001024.0); // joules
 
     // Setup root state
     struct State** root = malloc(1 * sizeof(struct State*));
