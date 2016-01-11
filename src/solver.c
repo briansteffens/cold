@@ -214,6 +214,7 @@ void check_cases(struct Context* ctx, struct State* base, struct Local* found)
 
     for (int i = 1; i < ctx->case_count; i++)
     {
+        // TODO: this state seems to have previous runs' data in it sometimes?
         states[0] = setup_state(ctx, i);
 
         states[0]->instruction_count = base->inst_ptr + 1;
@@ -222,7 +223,7 @@ void check_cases(struct Context* ctx, struct State* base, struct Local* found)
         states[0]->instructions_owned = malloc(
             states[0]->instruction_count * sizeof(bool));
 
-        for (int j = 0; j < states[0]->instruction_count - 1; j++)
+        for (int j = 0; j <= base->inst_ptr; j++)
         {
             states[0]->instructions[j] = base->instructions[j];
             states[0]->instructions_owned[j] = false;
@@ -231,7 +232,7 @@ void check_cases(struct Context* ctx, struct State* base, struct Local* found)
         states[0]->instructions[states[0]->instruction_count - 1] = ret_inst;
         states[0]->instructions_owned[states[0]->instruction_count - 1] = false;
 
-        printf("CASE %d\n", i);
+        states[0]->inst_ptr = 0;
         while (states[0]->inst_ptr < states[0]->instruction_count)
             interpret(states[0]);
 

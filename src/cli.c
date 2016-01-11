@@ -160,8 +160,10 @@ int main(int argc, char* argv[])
     // Setup context constants
     ctx.constant_count = 2;
     ctx.constants = malloc(ctx.constant_count * sizeof(struct Value));
-    value_set_int(&ctx.constants[0], 1);
-    value_set_int(&ctx.constants[1], 2);
+    //value_set_int(&ctx.constants[0], 1);
+    //value_set_int(&ctx.constants[1], 2);
+    value_set_float(&ctx.constants[0], 1.5f);
+    value_set_float(&ctx.constants[1], 1.0f);
 
     ctx.solution_inst = NULL;
     ctx.solution_inst_count = 0;
@@ -178,18 +180,18 @@ int main(int argc, char* argv[])
     // Case 0
     ctx.cases[0].input_values = malloc(ctx.input_count * sizeof(struct Value));
 
-    value_set_int(&ctx.cases[0].input_values[0], 3);
-    value_set_int(&ctx.cases[0].expected, 7);
-    //value_set_float(&ctx.cases[0].input_values[0], 4.000001f);
-    //value_set_float(&ctx.cases[0].expected, 7.0f);
+    //value_set_int(&ctx.cases[0].input_values[0], 3);
+    //value_set_int(&ctx.cases[0].expected, 7);
+    value_set_float(&ctx.cases[0].input_values[0], 4.000001f);
+    value_set_float(&ctx.cases[0].expected, 7.0f);
 
     // Case 1
     ctx.cases[1].input_values = malloc(ctx.input_count * sizeof(struct Value));
 
-    value_set_int(&ctx.cases[1].input_values[0], 4);
-    value_set_int(&ctx.cases[1].expected, 9);
-    //value_set_float(&ctx.cases[1].input_values[0], 5.000001f);
-    //value_set_float(&ctx.cases[1].expected, 8.5f);
+    //value_set_int(&ctx.cases[1].input_values[0], 4);
+    //value_set_int(&ctx.cases[1].expected, 9);
+    value_set_float(&ctx.cases[1].input_values[0], 5.000001f);
+    value_set_float(&ctx.cases[1].expected, 8.5f);
 
     // Setup root state
     struct State** root = malloc(1 * sizeof(struct State*));

@@ -134,7 +134,7 @@ void interpret(struct State* state)
     struct Instruction* inst = state->instructions[state->inst_ptr];
 
     //instruction_tostring(inst, buf, BUF_LEN);
-    //printf("%d %s\n", state->inst_ptr, buf);
+    //printf("\t%d %s\n", state->inst_ptr, buf);
     /*
     printf("\n\n\n****\n");
     print_program(state->instructions, state->instruction_count, true);
