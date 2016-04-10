@@ -27,7 +27,7 @@ enum VarType var_type_fromstring(char* input)
     else if (strcmp(input, "float") == 0)
         return TYPE_FLOAT;
     else if (strcmp(input, "string") == 0)
-        return TYPE_STRING; 
+        return TYPE_STRING;
 
     printf("String [%s] cannot be parsed into a VarType\n", input);
 }
