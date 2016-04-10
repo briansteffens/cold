@@ -6,6 +6,7 @@
 
 const bool DUMP_LOCALS = false;
 
+// Find the ordinal of a local by [name] in state->locals
 int find_local(struct State* state, const char* name)
 {
     for (int i = 0; i < state->local_count; i++)
@@ -16,11 +17,13 @@ int find_local(struct State* state, const char* name)
     exit(0);
 }
 
+// Find a local struct by [name] in [state]
 struct Local* get_local(struct State* state, const char* name)
 {
     return state->locals[find_local(state, name)];
 }
 
+// Deep copy a Value (including the data itself)
 struct Value* value_clone(const struct Value* src)
 {
     struct Value* ret = malloc(sizeof(struct Value));
@@ -33,17 +36,20 @@ struct Value* value_clone(const struct Value* src)
     return ret;
 }
 
+// Free a Value and its associated data
 void value_free(const struct Value* value)
 {
     free(value->data);
 }
 
+// Free a local and its associated value
 void local_free(struct Local* local)
 {
     value_free(local->value);
     free(local);
 }
 
+// Print a Value and its associated type information for debugging purposes
 void value_print(const struct Value* value)
 {
     switch (value->type)
@@ -60,6 +66,7 @@ void value_print(const struct Value* value)
     }
 }
 
+// Free an instruction and its associated paramaters and their values
 void instruction_free(struct Instruction* inst)
 {
     for (int i = 0; i < inst->param_count; i++)
@@ -68,6 +75,7 @@ void instruction_free(struct Instruction* inst)
     free(inst->params);
 }
 
+// Resolve an instruction parameter (label/literal) to its actual value
 struct Value* resolve(struct State* state, struct Param* param)
 {
     switch (param->type)
@@ -82,6 +90,7 @@ struct Value* resolve(struct State* state, struct Param* param)
     }
 }
 
+// Compare two values for value-based equality
 bool compare(struct Context* ctx, struct Value* left, struct Value* right)
 {
     if (left->type == TYPE_INT && right->type == TYPE_INT)
@@ -109,6 +118,7 @@ bool compare(struct Context* ctx, struct Value* left, struct Value* right)
     }
 }
 
+// Print out all locals in a given [state] for debugging purposes
 void dump_locals(struct State* state)
 {
     for (int i = 0; i < state->local_count; i++)
@@ -116,6 +126,7 @@ void dump_locals(struct State* state)
                *((int*)state->locals[i]->value->data));
 }
 
+// Print out a list of instructions for debugging purposes
 void print_program(struct Instruction** inst, int count, bool line_nums)
 {
     const int BUF_LEN = 255;
@@ -131,6 +142,8 @@ void print_program(struct Instruction** inst, int count, bool line_nums)
     }
 }
 
+// Interpret the current line in a given [state] and advance the instruction
+// pointer if necessary.
 void interpret(struct State* state)
 {
     const int BUF_LEN = 100;
@@ -285,6 +298,7 @@ void free_state(struct State* state)
     free(state);
 }
 
+// Given a [Context] and a test case, construct a State representing it
 struct State* setup_state(struct Context* ctx, int case_index)
 {
     struct State* ret = malloc(1 * sizeof(struct State));
@@ -297,7 +311,8 @@ struct State* setup_state(struct Context* ctx, int case_index)
     {
         ret->locals[i] = malloc(sizeof(struct Local));
         ret->locals[i]->name = ctx->input_names[i];
-        ret->locals[i]->value = value_clone(&ctx->cases[case_index].input_values[i]);
+        ret->locals[i]->value =
+            value_clone(&ctx->cases[case_index].input_values[i]);
 
         ret->locals_owned[i] = true;
     }

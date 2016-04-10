@@ -16,7 +16,7 @@ char* trim(const char* input)
     int content_end;
 
     int input_len = strlen(input);
-    
+
     for (int i = 0; i < input_len; i++)
         if (!is_whitespace(input[i]))
         {
@@ -231,7 +231,7 @@ struct Function* parse(char** lines, int line_count, int* out_count)
     return ret;
 }
 
-/* 
+/*
  *  Parse contents of [filename] into an array of functions [out_functions]
  *
  *  [out_functions] is created with malloc so must be freed by the caller
@@ -260,7 +260,7 @@ int parse_file(char* filename, struct Function** out_functions)
     {
         free(lines[i]);
     }
-    
+
     free(lines);
 
     return function_count;
