@@ -129,7 +129,8 @@ void write_code(struct State* state)
         state->instructions_owned[i] = true;
 }
 */
-int main(int argc, char* argv[])
+
+void solve_emc2()
 {
     struct Context ctx;
 
@@ -238,4 +239,9 @@ int main(int argc, char* argv[])
     for (int i = 0; i < ctx.depth; i++)
         free(ctx.pattern_mask[i]);
     free(ctx.pattern_mask);
+}
+
+int main(int argc, char* argv[])
+{
+    solve_emc2();
 }
