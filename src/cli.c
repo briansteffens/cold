@@ -15,6 +15,14 @@ bool starts_with(const char* haystack, const char* needle)
 
 int main(int argc, char* argv[])
 {
+    if (argc != 2)
+    {
+        printf("Usage: bin/cold solvers/emc2.solve\n");
+        return 0;
+    }
+
+    const char* solver_file = argv[1];
+
     struct Context ctx;
 
     // Default float precision
@@ -36,12 +44,11 @@ int main(int argc, char* argv[])
     ctx.solution_inst_count = 0;
 
     // Read solve file
-    const char* filename = "solvers/emc2.solve";
-    FILE* file = fopen(filename, "r");
+    FILE* file = fopen(solver_file, "r");
 
     if (file == 0)
     {
-        printf("Failed to open source file [%s]\n", filename);
+        printf("Failed to open source file [%s]\n", solver_file);
         return -1;
     }
 
