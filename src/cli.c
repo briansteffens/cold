@@ -36,7 +36,7 @@ int main(int argc, char* argv[])
     ctx.solution_inst_count = 0;
 
     // Read solve file
-    const char* filename = "test.solve";
+    const char* filename = "solvers/emc2.solve";
     FILE* file = fopen(filename, "r");
 
     if (file == 0)
