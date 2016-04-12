@@ -3,3 +3,6 @@ constant f300000000.0
 pattern let
 pattern add
 pattern mul
+input z
+case f1.0 f90000000000000000.0
+case f86.18 f7756200000000001024.0

@@ -123,6 +123,29 @@ void value_set_string(struct Value* value, char* val)
     strncpy(value->data, val, value->size);
 }
 
+// Set a value based on a string representation with preceding type hinting
+//  Example: i123    -> int 123
+//  Example: f123.45 -> float 123.45
+void value_set_from_string(struct Value* value, char* input)
+{
+    const char type = input[0];
+    const char* val = input + 1;
+
+    if (type == 'i')
+    {
+        value_set_int(value, atoi(val));
+    }
+    else if (type == 'f')
+    {
+        value_set_float(value, atof(val));
+    }
+    else
+    {
+        printf("ERROR: unrecognized constant type\n");
+        exit(0);
+    }
+}
+
 void value_tostring(struct Value* val, char* buf, int n)
 {
     switch (val->type)

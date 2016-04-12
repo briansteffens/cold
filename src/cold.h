@@ -52,6 +52,7 @@ void value_tostring(struct Value* val, char* buf, int n);
 void value_set_string(struct Value* value, char* val);
 void value_set_int(struct Value* value, int val);
 void value_set_float(struct Value* value, float val);
+void value_set_from_string(struct Value* value, char* input);
 
 struct Local
 {
