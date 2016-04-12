@@ -1,9 +1,15 @@
+# E=MC^2
+
 precision f10000.0
-# Speed of light
-constant f300000000.0
+
+constant f300000000.0 # Speed of light
+
 pattern let
 pattern add
 pattern mul
+
 input z
+
+# Expected: kg to joules conversions
 case f1.0 f90000000000000000.0
 case f86.18 f7756200000000001024.0

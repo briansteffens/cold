@@ -287,61 +287,60 @@ int main(int argc, char* argv[])
     for (int i = 0; i < line_count; i++)
     {
         printf("%d|%s\n", i, lines[i]);
+        char* raw = NULL;
 
-        // Comment
-        if (starts_with(lines[i], "#"))
+        // Strip out comments
+        char* comment_start = strchr(lines[i], '#');
+        if (comment_start != NULL)
         {
-            continue;
+            raw = strndup(lines[i], comment_start - lines[i]);
+        }
+        else
+        {
+            raw = strdup(lines[i]);
         }
 
-        if (starts_with(lines[i], "precision "))
+        char* line = trim(raw);
+        free(raw);
+
+        if (starts_with(line, "precision "))
         {
-            if ((lines[i] + 10)[0] != 'f')
+            if ((line + 10)[0] != 'f')
             {
                 printf("Expected a float for precision declaration\n");
                 exit(0);
             }
 
-            value_set_float(&ctx.precision, atof(lines[i] + 11));
-
-            continue;
+            value_set_float(&ctx.precision, atof(line + 11));
         }
-
-        if (starts_with(lines[i], "pattern "))
+        else if (starts_with(line, "pattern "))
         {
             char fn[80];
 
             strcpy(fn, "patterns/");
-            strcat(fn, lines[i] + 8);
+            strcat(fn, line + 8);
             strcat(fn, ".pattern");
 
             add_pattern(&ctx, fn);
-
-            continue;
         }
-
-        if (starts_with(lines[i], "constant "))
+        else if (starts_with(line, "constant "))
         {
             ctx.constant_count++;
             ctx.constants = realloc(ctx.constants,
                     ctx.constant_count * sizeof(struct Value));
 
             value_set_from_string(&ctx.constants[ctx.constant_count - 1],
-                    lines[i] + 9);
-
-            continue;
+                    line + 9);
         }
-
-        if (starts_with(lines[i], "input "))
+        else if (starts_with(line, "input "))
         {
             ctx.input_count++;
             ctx.input_names = realloc(ctx.input_names,
                     ctx.input_count * sizeof(char*));
 
-            ctx.input_names[ctx.input_count - 1] = strdup(lines[i] + 6);
+            ctx.input_names[ctx.input_count - 1] = strdup(line + 6);
         }
-
-        if (starts_with(lines[i], "case "))
+        else if (starts_with(line, "case "))
         {
             // Allocate a new case
             ctx.case_count++;
@@ -355,7 +354,7 @@ int main(int argc, char* argv[])
 
             // Split parameters
             int part_count = 0;
-            char** parts = split(lines[i] + 5, ' ', &part_count);
+            char** parts = split(line + 5, ' ', &part_count);
 
             if (part_count - 1 != ctx.input_count)
             {
@@ -377,9 +376,17 @@ int main(int argc, char* argv[])
                 free(parts[i]);
 
             free(parts);
-
-            continue;
         }
+        else if (strcmp(line, "") == 0)
+        {
+            // Blank line, ignore
+        }
+        else
+        {
+            printf("ERROR: Unrecognized solve file line [%s]\n", lines[i]);
+        }
+
+        free(line);
     }
 
     free(lines);
