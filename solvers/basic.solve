@@ -1,12 +1,13 @@
-# x = 2x
+# x = 2x + 1
 
-constant i2
+depth 2
 
-pattern let
+constant i1
+
 pattern add
 pattern mul
 
 input z
 
-case i2 i4
-case i3 i6
+case i2 i5
+case i3 i7
