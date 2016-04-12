@@ -1,0 +1,12 @@
+# x = 2x
+
+constant i2
+
+pattern let
+pattern add
+pattern mul
+
+input z
+
+case i2 i4
+case i3 i6
