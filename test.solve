@@ -1,4 +1,5 @@
 precision f10000.0
+# Speed of light
 constant f300000000.0
 pattern let
 pattern add

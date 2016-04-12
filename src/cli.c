@@ -288,6 +288,12 @@ int main(int argc, char* argv[])
     {
         printf("%d|%s\n", i, lines[i]);
 
+        // Comment
+        if (starts_with(lines[i], "#"))
+        {
+            continue;
+        }
+
         if (starts_with(lines[i], "precision "))
         {
             if ((lines[i] + 10)[0] != 'f')
