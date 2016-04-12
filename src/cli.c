@@ -241,7 +241,107 @@ void solve_emc2()
     free(ctx.pattern_mask);
 }
 
+bool starts_with(const char* haystack, const char* needle)
+{
+    return strncmp(haystack, needle, strlen(needle)) == 0;
+}
+
 int main(int argc, char* argv[])
 {
-    solve_emc2();
+    struct Context ctx;
+
+    ctx.pattern_count = 0;
+    ctx.patterns = malloc(0);
+
+    ctx.constant_count = 0;
+    ctx.constants = malloc(ctx.constant_count * sizeof(struct Value));
+
+    const char* filename = "test.solve";
+    FILE* file = fopen(filename, "r");
+
+    if (file == 0)
+    {
+        printf("Failed to open source file [%s]\n", filename);
+        return -1;
+    }
+
+    int line_count;
+    char** lines = read_lines(file, &line_count);
+
+    fclose(file);
+
+    for (int i = 0; i < line_count; i++)
+    {
+        printf("%d|%s\n", i, lines[i]);
+
+        if (starts_with(lines[i], "precision "))
+        {
+            if ((lines[i] + 10)[0] != 'f')
+            {
+                printf("Expected a float for precision declaration\n");
+                exit(0);
+            }
+
+            value_set_float(&ctx.precision, atof(lines[i] + 11));
+
+            continue;
+        }
+
+        if (starts_with(lines[i], "pattern "))
+        {
+            char fn[80];
+
+            strcpy(fn, "patterns/");
+            strcat(fn, lines[i] + 8);
+            strcat(fn, ".pattern");
+
+            add_pattern(&ctx, fn);
+
+            continue;
+        }
+
+        if (starts_with(lines[i], "constant ")) {
+            const char type = (lines[i] + 9)[0];
+            const char* val = lines[i] + 10;
+
+            ctx.constant_count++;
+            ctx.constants = realloc(ctx.constants,
+                    ctx.constant_count * sizeof(struct Value));
+            struct Value* target = &ctx.constants[ctx.constant_count - 1];
+
+            if (type == 'i')
+            {
+                value_set_int(target, atoi(val));
+            }
+            else if (type == 'f')
+            {
+                value_set_float(target, atof(val));
+            }
+            else
+            {
+                printf("ERROR: unrecognized constant type\n");
+                exit(0);
+            }
+
+            continue;
+        }
+    }
+
+    // Setup pattern mask
+    ctx.depth = 3;
+    ctx.pattern_mask = malloc(ctx.depth * sizeof(bool*));
+
+    for (int i = 0; i < ctx.depth; i++)
+    {
+        ctx.pattern_mask[i] = malloc(ctx.pattern_count * sizeof(bool));
+        for (int j = 0; j < ctx.pattern_count; j++)
+        {
+            ctx.pattern_mask[i][j] = true;
+            printf("%d %d\n", i, j);
+        }
+    }
+
+    free(lines);
+
+    return 0;
 }
