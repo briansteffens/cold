@@ -28,6 +28,9 @@ int main(int argc, char* argv[])
     // Default float precision
     value_set_float(&ctx.precision, 0.0f);
 
+    // Default pattern depth
+    ctx.depth = 3;
+
     ctx.pattern_count = 0;
     ctx.patterns = malloc(0);
 
@@ -86,6 +89,10 @@ int main(int argc, char* argv[])
             }
 
             value_set_float(&ctx.precision, atof(line + 11));
+        }
+        else if (starts_with(line, "depth "))
+        {
+            ctx.depth = atoi(line + 6);
         }
         else if (starts_with(line, "pattern "))
         {
@@ -166,7 +173,6 @@ int main(int argc, char* argv[])
     free(lines);
 
     // Setup pattern mask
-    ctx.depth = 3;
     ctx.pattern_mask = malloc(ctx.depth * sizeof(bool*));
 
     for (int i = 0; i < ctx.depth; i++)

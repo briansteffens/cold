@@ -1,5 +1,6 @@
 # E=MC^2
 
+depth 3
 precision f10000.0
 
 constant f300000000.0 # Speed of light
