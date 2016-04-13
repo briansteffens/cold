@@ -170,6 +170,7 @@ void interpret(struct State* state)
         break;
     case INST_ADD:;
     case INST_MUL:;
+    case INST_DIV:;
         int target = find_local(state, inst->params[0]->value->data);
 
         struct Value* left = resolve(state, inst->params[1]);
@@ -206,6 +207,10 @@ void interpret(struct State* state)
             case INST_MUL:
                 value_set_float(new_local->value,
                     *((float*)left->data)**((float*)right->data));
+                break;
+            case INST_DIV:
+                value_set_float(new_local->value,
+                    *((float*)left->data) / *((float*)right->data));
                 break;
             }
         }

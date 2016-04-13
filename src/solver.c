@@ -28,7 +28,7 @@ void print_status(struct Context* ctx, bool always)
 struct State* state_fork(struct State* orig)
 {
     struct State* ret = malloc(sizeof(struct State));
-    //printf("FORK %d\n", ret);
+
     // Shallow copy locals to the new state
     ret->local_count = orig->local_count;
     ret->locals_owned = malloc(ret->local_count * sizeof(bool));

@@ -20,6 +20,7 @@ enum InstructionType
     INST_LET
 ,   INST_ADD
 ,   INST_MUL
+,   INST_DIV
 ,   INST_JUMP
 ,   INST_CMP
 ,   INST_RET
