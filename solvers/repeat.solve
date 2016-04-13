@@ -1,0 +1,13 @@
+# x = 2x + 3
+
+depth 3
+
+constant i1
+
+pattern add
+pattern mul
+
+input z
+
+case i2 i7
+case i3 i9
