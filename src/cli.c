@@ -72,7 +72,6 @@ int main(int argc, char* argv[])
     // Parse solve file
     for (int i = 0; i < line_count; i++)
     {
-        printf("%d|%s\n", i, lines[i]);
         char* raw = NULL;
 
         // Strip out comments
@@ -190,7 +189,6 @@ int main(int argc, char* argv[])
         for (int j = 0; j < ctx.pattern_count; j++)
         {
             ctx.pattern_mask[i][j] = true;
-            printf("%d %d\n", i, j);
         }
     }
 

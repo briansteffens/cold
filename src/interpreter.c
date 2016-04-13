@@ -146,19 +146,8 @@ void print_program(struct Instruction** inst, int count, bool line_nums)
 // pointer if necessary.
 void interpret(struct State* state)
 {
-    const int BUF_LEN = 100;
-    char buf[BUF_LEN];
-
     struct Instruction* inst = state->instructions[state->inst_ptr];
 
-    instruction_tostring(inst, buf, BUF_LEN);
-    printf("\tINTR: %d %d %s\n", state, state->inst_ptr, buf);
-    /*
-    printf("\n\n\n****\n");
-    print_program(state->instructions, state->instruction_count, true);
-    printf("****\n\n\n");
-    printf("inst_ptr: %d\n", state->inst_ptr);
-    */
     switch (inst->type)
     {
     case INST_LET:

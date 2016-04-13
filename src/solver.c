@@ -174,7 +174,6 @@ struct State** vary(struct Context* ctx, struct State* input, int* state_count)
         ret[i] = state_fork(input);
         ret[i]->instructions[ret[i]->inst_ptr] = insts[i];
         ret[i]->instructions_owned[ret[i]->inst_ptr] = did_vary;
-        print_program(ret[i]->instructions, ret[i]->instruction_count, true);
     }
 
     free(insts);
@@ -239,7 +238,6 @@ void check_cases(struct Context* ctx, struct State* base, struct Local* found)
         bool success = true;
         if (!compare(ctx, states[0]->ret, &ctx->cases[i].expected))
         {
-            printf("FAIL: CASE %d\n", i);
             success = false;
         }
         else if (i == ctx->case_count - 1)
@@ -444,7 +442,6 @@ void step_vary(struct Context* ctx, struct State* state)
             continue;
 
         // Found a solution to all cases.
-        printf("*** SOLUTION ***\n");
         print_program(ctx->solution_inst, ctx->solution_inst_count, true);
         break;
     }
