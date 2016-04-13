@@ -1,0 +1,19 @@
+# G((m1*m2)/(r^2))
+
+depth 4
+
+precision f0.1
+
+constant f6.67408E-11 # Gravitational constant
+constant f2.0
+
+pattern mul
+pattern div
+pattern exp
+
+input m1
+input m2
+input r
+
+# (Earth mass) (Moon mass)    (Distance) (Newtons)
+case f5.972E24 f7.34767309E22 f3.8E8 f2.0281208952533313E20
