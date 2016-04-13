@@ -136,6 +136,7 @@ struct Context
     int constant_count;
 
     char* generated_programs_filename;
+    int programs_completed;
 };
 
 struct Argument

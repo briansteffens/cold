@@ -1,10 +1,29 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <string.h>
+#include <time.h>
+#include <unistd.h>
 
 #include "cold.h"
 #include "interpreter.h"
 #include "compiler.h"
+
+void print_status(struct Context* ctx, bool always)
+{
+    static time_t last = 0;
+    time_t now = time(NULL);
+
+    if (!always && now == last)
+    {
+        return;
+    }
+
+    printf("\rprograms completed: %d", ctx->programs_completed);
+    fflush(stdout);
+
+    last = now;
+}
 
 struct State* state_fork(struct State* orig)
 {
@@ -414,6 +433,7 @@ void step_vary(struct Context* ctx, struct State* state)
     {
         if (ctx->generated_programs_filename)
         {
+            ctx->programs_completed++;
             fprint_program(ctx, state);
         }
 
@@ -442,6 +462,7 @@ void step_vary(struct Context* ctx, struct State* state)
             continue;
 
         // Found a solution to all cases.
+        printf("\n");
         print_program(ctx->solution_inst, ctx->solution_inst_count, true);
         break;
     }
@@ -459,6 +480,8 @@ void step_vary(struct Context* ctx, struct State* state)
 
 void step(struct Context* ctx, struct State** states, int state_count)
 {
+    print_status(ctx, false);
+
     for (int i = 0; i < state_count; i++)
     {
         // If the instruction to be interpreted is a "NEXT", it needs to be

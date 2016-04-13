@@ -25,6 +25,8 @@ int main(int argc, char* argv[])
 
     struct Context ctx;
 
+    ctx.programs_completed = 0;
+
     // Output all generated programs to this file
     ctx.generated_programs_filename = "output/generated_programs";
 
@@ -213,6 +215,9 @@ int main(int argc, char* argv[])
 
     // gogogo
     step(&ctx, root, 1);
+
+    print_status(&ctx, true);
+    printf("\n");
 
     // Free the root state
     free_state(root[0]);
