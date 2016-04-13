@@ -25,6 +25,15 @@ int main(int argc, char* argv[])
 
     struct Context ctx;
 
+    // Output all generated programs to this file
+    ctx.generated_programs_filename = "output/generated_programs";
+
+    // If outputing generated programs, delete the last output first
+    if (ctx.generated_programs_filename)
+    {
+        remove(ctx.generated_programs_filename);
+    }
+
     // Default float precision
     value_set_float(&ctx.precision, 0.0f);
 

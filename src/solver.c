@@ -379,6 +379,32 @@ struct State** vary_patterns(struct Context* ctx, struct State* state,
     return ret;
 }
 
+// Append a program to generated_programs file
+void fprint_program(struct Context* ctx, struct State* state)
+{
+    FILE* file = fopen(ctx->generated_programs_filename, "a");
+
+    if (file == NULL)
+    {
+        printf("Error opening [%s] for writing.\n",
+                ctx->generated_programs_filename);
+        exit(0);
+    }
+
+    const int BUF_LEN = 255;
+    char buf[BUF_LEN];
+
+    for (int i = 0; i < state->instruction_count; i++)
+    {
+        instruction_tostring(state->instructions[i], buf, BUF_LEN);
+        fprintf(file, "%s\n", buf);
+    }
+
+    fprintf(file, "\n");
+
+    fclose(file);
+}
+
 // Forward declaration because step and step_vary are mutually-dependent
 void step(struct Context* ctx, struct State** states, int state_count);
 
@@ -387,7 +413,14 @@ void step(struct Context* ctx, struct State** states, int state_count);
 void step_vary(struct Context* ctx, struct State* state)
 {
     if (is_execution_finished(state))
+    {
+        if (ctx->generated_programs_filename)
+        {
+            fprint_program(ctx, state);
+        }
+
         return;
+    }
 
     int varied_count = 0;
     struct State** varied = vary(ctx, state, &varied_count);
@@ -431,17 +464,6 @@ void step(struct Context* ctx, struct State** states, int state_count)
 {
     for (int i = 0; i < state_count; i++)
     {
-        // End interpretation if the instruction pointer is out of bounds
-        if (is_execution_finished(states[i]))
-        {
-            printf("---\n");
-            print_program(states[i]->instructions,states[i]->instruction_count,
-                          true);
-            printf("---\n");
-
-            continue;
-        }
-
         // If the instruction to be interpreted is a "NEXT", it needs to be
         // replaced with patterns.
         if (states[i]->instructions[states[i]->inst_ptr]->type == INST_NEXT)

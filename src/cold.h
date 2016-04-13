@@ -134,6 +134,8 @@ struct Context
 
     struct Value* constants;
     int constant_count;
+
+    char* generated_programs_filename;
 };
 
 struct Argument
