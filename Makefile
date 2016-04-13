@@ -24,7 +24,7 @@ cli.o: src/cli.c $(HEADERS)
 	gcc -c src/cli.c -o obj/cli.o
 
 cli: pre-build cold.o interpreter.o solver.o compiler.o generator.o cli.o
-	gcc obj/compiler.o obj/interpreter.o obj/cold.o obj/solver.o obj/generator.o obj/cli.o -o bin/cold
+	gcc obj/compiler.o obj/interpreter.o obj/cold.o obj/solver.o obj/generator.o obj/cli.o -lm -o bin/cold
 
 clean:
 	rm -rf obj bin

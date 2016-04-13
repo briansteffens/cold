@@ -1,0 +1,17 @@
+# (4 / 3) * pi * r^3
+
+depth 3
+
+precision f0.1
+
+constant f1.33333 # 4 / 3
+constant f3.14159
+constant f3.0
+
+pattern mul
+pattern exp
+
+input r
+
+case f1.0 f4.188786
+case f2.0 f33.510293

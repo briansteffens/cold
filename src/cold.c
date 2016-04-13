@@ -60,6 +60,8 @@ char* instruction_type_tostring(enum InstructionType input)
         return "mul";
     case INST_DIV:
         return "div";
+    case INST_EXP:
+        return "exp";
     case INST_JUMP:
         return "jmp";
     case INST_CMP:
@@ -86,6 +88,8 @@ enum InstructionType instruction_type_fromstring(char* input)
         return INST_MUL;
     else if (strcmp(input, "div") == 0)
         return INST_DIV;
+    else if (strcmp(input, "exp") == 0)
+        return INST_EXP;
     else if (strcmp(input, "jmp") == 0)
         return INST_JUMP;
     else if (strcmp(input, "cmp") == 0)

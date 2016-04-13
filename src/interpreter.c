@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 #include "cold.h"
 
@@ -171,6 +172,7 @@ void interpret(struct State* state)
     case INST_ADD:;
     case INST_MUL:;
     case INST_DIV:;
+    case INST_EXP:;
         int target = find_local(state, inst->params[0]->value->data);
 
         struct Value* left = resolve(state, inst->params[1]);
@@ -193,6 +195,10 @@ void interpret(struct State* state)
                 value_set_int(new_local->value,
                     *((int*)left->data)**((int*)right->data));
                 break;
+            case INST_DIV:
+                value_set_int(new_local->value,
+                    *((int*)left->data) / *((int*)right->data));
+                break;
             }
         }
         else if (left->type == TYPE_FLOAT && right->type == TYPE_FLOAT &&
@@ -211,6 +217,10 @@ void interpret(struct State* state)
             case INST_DIV:
                 value_set_float(new_local->value,
                     *((float*)left->data) / *((float*)right->data));
+                break;
+            case INST_EXP:
+                value_set_float(new_local->value,
+                    powf(*((float*)left->data), *((float*)right->data)));
                 break;
             }
         }
