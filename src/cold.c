@@ -134,6 +134,7 @@ void value_set_string(struct Value* value, char* val)
 // Set a value based on a string representation with preceding type hinting
 //  Example: i123    -> int 123
 //  Example: f123.45 -> float 123.45
+//  Example: f123e2  -> float 12300.0
 void value_set_from_string(struct Value* value, char* input)
 {
     const char type = input[0];
@@ -145,7 +146,22 @@ void value_set_from_string(struct Value* value, char* input)
     }
     else if (type == 'f')
     {
-        value_set_float(value, atof(val));
+        float f;
+
+        if (strchr(val, 'E'))
+        {
+            if (!sscanf(val, "%f", &f))
+            {
+                printf("Unable to parse [%s] as scientific notation\n", val);
+                exit(0);
+            }
+        }
+        else
+        {
+            f = atof(val);
+        }
+
+        value_set_float(value, f);
     }
     else
     {
