@@ -160,7 +160,9 @@ void interpret(struct State* state)
         struct Local* local = malloc(sizeof(struct Local));
 
         local->name = strdup(inst->params[0]->value->data);
-        local->value = value_clone(inst->params[1]->value);
+
+        struct Value* new_value = resolve(state, inst->params[1]);
+        local->value = value_clone(new_value);
 
         state->locals[state->local_count - 1] = local;
         state->locals_owned[state->local_count - 1] = true;

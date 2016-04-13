@@ -87,11 +87,17 @@ struct Param** vary_params(struct Context* ctx, struct State* state,
     if (flags & PTRN_CONSTANTS)
         count += ctx->constant_count;
 
-    struct Param** ret = malloc(count * sizeof(struct Param*));
+    if (count == 0)
+    {
+        printf("ERROR: Unable to vary a parameter\n");
+        exit(0);
+    }
 
+    struct Param** ret = malloc(count * sizeof(struct Param*));
     int current = 0;
 
     if (flags & PTRN_LOCALS)
+    {
         for (int i = 0; i < state->local_count; i++)
         {
             ret[current] = malloc(sizeof(struct Param));
@@ -100,8 +106,10 @@ struct Param** vary_params(struct Context* ctx, struct State* state,
             value_set_string(ret[current]->value, state->locals[i]->name);
             current++;
         }
+    }
 
     if (flags & PTRN_CONSTANTS)
+    {
         for (int i = 0; i < ctx->constant_count; i++)
         {
             ret[current] = malloc(sizeof(struct Param));
@@ -109,6 +117,7 @@ struct Param** vary_params(struct Context* ctx, struct State* state,
             ret[current]->type = PARAM_LITERAL;
             current++;
         }
+    }
 
     *output_count = current;
     return ret;

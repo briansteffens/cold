@@ -1,0 +1,11 @@
+# x = x^3
+
+depth 3
+
+pattern mul
+pattern let
+
+input z
+
+case i2 i8
+case i3 i27
