@@ -1,0 +1,18 @@
+# (b1 + b2) * h / 2
+
+depth 3
+
+precision f0.1
+
+constant f2.0
+
+pattern add
+pattern mul
+pattern div
+
+input b1
+input b2
+input h
+
+case f3.0 f4.0 f5.0 f17.5
+case f2.0 f5.0 f8.0 f28.0
