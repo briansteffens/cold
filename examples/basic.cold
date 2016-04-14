@@ -1,7 +1,4 @@
-def main
-    arg $x int
-    let $r i0
-    mul $r !l i2
-    add $r !l i1
-    prt $r
+def main $x
+    let $r i2
+    add $r $x $r
     ret $r

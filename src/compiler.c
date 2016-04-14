@@ -189,10 +189,11 @@ struct Function* parse(char** lines, int line_count, int* out_count)
     for (int i = 0; i < line_count; i++)
     {
         int part_count;
-        char** parts = split(lines[i], ' ', &part_count);
-
+        //char** parts = split(lines[i], ' ', &part_count);
+/*
         if (strcmp(parts[0], "def") == 0)
         {
+            printf("AAA\n");
             (*out_count)++;
             ret = realloc(ret, *out_count * sizeof(struct Function));
 
@@ -200,32 +201,33 @@ struct Function* parse(char** lines, int line_count, int* out_count)
 
             cur->name = strdup(parts[1]);
 
-            cur->arg_count = 0;
-            cur->args = malloc(cur->arg_count * sizeof(struct Argument));
+            cur->arg_count = part_count - 2;
+            cur->args = malloc(cur->arg_count * sizeof(char*));
+
+            for (int j = 0; j < cur->arg_count; j++)
+            {
+                cur->args[j] = strdup(parts[j + 2]);
+            }
 
             cur->inst_count = 0;
             cur->insts = malloc(cur->inst_count * sizeof(struct Instruction));
         }
-        else if (strcmp(parts[0], "arg") == 0)
-        {
-            cur->arg_count++;
-            cur->args = realloc(cur->args,
-                cur->arg_count * sizeof(struct Argument));
-
-            cur->args[cur->arg_count - 1].name = strdup(parts[1] + 1);
-            cur->args[cur->arg_count - 1].type = var_type_fromstring(parts[2]);
-        }
         else
         {
+            printf("BBB\n");
             cur->inst_count++;
             cur->insts = realloc(cur->insts,
                 cur->inst_count * sizeof(struct Instruction));
 
             parse_instruction(&cur->insts[cur->inst_count - 1], parts,
                               part_count);
+            printf("CCC\n");
         }
+        */
 
-        free(parts);
+        printf("DDD\n");
+        //free(parts);
+        printf("EEE\n");
     }
 
     return ret;
@@ -238,7 +240,7 @@ struct Function* parse(char** lines, int line_count, int* out_count)
  *
  *  returns: the number of functions parsed or a negative number on error
  */
-int parse_file(char* filename, struct Function** out_functions)
+int parse_file(const char* filename, struct Function** out_functions)
 {
     FILE* file = fopen(filename, "r");
 
@@ -254,14 +256,14 @@ int parse_file(char* filename, struct Function** out_functions)
     fclose(file);
 
     int function_count;
-    *out_functions = parse(lines, line_count, &function_count);
-
+    //*out_functions = parse(lines, line_count, &function_count);
+/*
     for (int i = 0; i < line_count; i++)
     {
         free(lines[i]);
     }
 
     free(lines);
-
+*/
     return function_count;
 }

@@ -141,17 +141,11 @@ struct Context
     int programs_completed;
 };
 
-struct Argument
-{
-    char* name;
-    enum VarType type;
-};
-
 struct Function
 {
     char* name;
 
-    struct Argument* args;
+    char** args;
     int arg_count;
 
     struct Instruction* insts;

@@ -255,6 +255,12 @@ void instruction_tostring(struct Instruction* input, char* buf, int n)
 
 void free_function(struct Function* func)
 {
+    for (int i = 0; i < func->arg_count; i++)
+    {
+        free(func->args[i]);
+    }
+
     free(func->args);
+
     free(func->insts);
 }

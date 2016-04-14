@@ -13,16 +13,14 @@ bool starts_with(const char* haystack, const char* needle)
     return strncmp(haystack, needle, strlen(needle)) == 0;
 }
 
-int main(int argc, char* argv[])
+int usage()
 {
-    if (argc != 2)
-    {
-        printf("Usage: bin/cold solvers/emc2.solve\n");
-        return 0;
-    }
+    printf("Usage: bin/cold solve solvers/emc2.solve\n");
+    return 0;
+}
 
-    const char* solver_file = argv[1];
-
+void handle_solver(const char* solver_file)
+{
     struct Context ctx;
 
     ctx.programs_completed = 0;
@@ -63,7 +61,7 @@ int main(int argc, char* argv[])
     if (file == 0)
     {
         printf("Failed to open source file [%s]\n", solver_file);
-        return -1;
+        return;
     }
 
     int line_count;
@@ -243,6 +241,70 @@ int main(int argc, char* argv[])
     for (int i = 0; i < ctx.depth; i++)
         free(ctx.pattern_mask[i]);
     free(ctx.pattern_mask);
+}
+
+void handle_run(const char* filename, char** inputs, int inputs_count)
+{
+    printf("filename: %s\n", filename);
+
+    struct Function** functions;
+    printf("^^\n");
+    int func_count = parse_file(filename, functions);
+    printf(">>\n");
+    return;
+    /*
+    if (func_count < 0)
+    {
+        printf("Error parsing file [%s]\n", filename);
+        exit(0);
+    }
+
+    for (int i = 0; i < func_count; i++)
+    {
+        free_function(functions[i]);
+    }
+
+    free(functions);
+
+/*
+    struct State* state = malloc(sizeof(struct State));
+
+    state->local_count = inputs_count;
+    state->locals = malloc(inputs_count * sizeof(struct Local*));
+    state->locals_owned = malloc(inputs_count * sizeof(bool));
+
+    for (int i = 0; i < inputs_count; i++)
+    {
+        state->locals[i] = malloc(sizeof(struct Local));
+        state->locals[i]->name = ""; //TODO
+        state->locals[i]->value = ""; //TODO
+
+        state->locals_owned[i] = true;
+    }
+
+    state->ret = NULL;
+*/
+}
+
+int main(int argc, char* argv[])
+{
+    if (argc < 3)
+    {
+        return usage();
+    }
+
+    if (strcmp(argv[1], "solve") == 0)
+    {
+        handle_solver(argv[2]);
+    }
+    else if (strcmp(argv[1], "run") == 0)
+    {
+        handle_run(argv[2], argv + 3, argc - 3);
+    }
+    else
+    {
+        return usage();
+    }
 
     return 0;
 }
