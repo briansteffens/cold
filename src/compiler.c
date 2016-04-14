@@ -180,24 +180,22 @@ void parse_instruction(struct Instruction* inst, char** parts, int part_count)
     }
 }
 
-struct Function* parse(char** lines, int line_count, int* out_count)
+struct Function** parse(char** lines, int line_count, int* out_count)
 {
     *out_count = 0;
-    struct Function* ret = malloc(*out_count * sizeof(struct Function));
+    struct Function** ret = malloc(0);
     struct Function* cur = NULL;
 
     for (int i = 0; i < line_count; i++)
     {
         int part_count;
-        //char** parts = split(lines[i], ' ', &part_count);
-/*
+        char** parts = split(lines[i], ' ', &part_count);
+
         if (strcmp(parts[0], "def") == 0)
         {
-            printf("AAA\n");
             (*out_count)++;
-            ret = realloc(ret, *out_count * sizeof(struct Function));
-
-            cur = &ret[*out_count - 1];
+            ret = realloc(ret, *out_count * sizeof(struct Function*));
+            cur = ret[*out_count - 1] = malloc(sizeof(struct Function));
 
             cur->name = strdup(parts[1]);
 
@@ -214,40 +212,33 @@ struct Function* parse(char** lines, int line_count, int* out_count)
         }
         else
         {
-            printf("BBB\n");
             cur->inst_count++;
             cur->insts = realloc(cur->insts,
                 cur->inst_count * sizeof(struct Instruction));
 
             parse_instruction(&cur->insts[cur->inst_count - 1], parts,
                               part_count);
-            printf("CCC\n");
         }
-        */
 
-        printf("DDD\n");
-        //free(parts);
-        printf("EEE\n");
+        free(parts);
     }
 
     return ret;
 }
 
 /*
- *  Parse contents of [filename] into an array of functions [out_functions]
+ *  Parse contents of [filename] into an array of functions.
  *
- *  [out_functions] is created with malloc so must be freed by the caller
- *
- *  returns: the number of functions parsed or a negative number on error
+ *  The array is created with malloc so must be freed by the caller.
  */
-int parse_file(const char* filename, struct Function** out_functions)
+struct Function** parse_file(const char* filename, int* function_count)
 {
     FILE* file = fopen(filename, "r");
 
     if (file == 0)
     {
         printf("Failed to open source file [%s]\n", filename);
-        return -1;
+        exit(0);
     }
 
     int line_count;
@@ -255,15 +246,14 @@ int parse_file(const char* filename, struct Function** out_functions)
 
     fclose(file);
 
-    int function_count;
-    //*out_functions = parse(lines, line_count, &function_count);
-/*
+    struct Function** ret = parse(lines, line_count, function_count);
+
     for (int i = 0; i < line_count; i++)
     {
         free(lines[i]);
     }
 
     free(lines);
-*/
-    return function_count;
+
+    return ret;
 }

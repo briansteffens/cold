@@ -245,30 +245,37 @@ void handle_solver(const char* solver_file)
 
 void handle_run(const char* filename, char** inputs, int inputs_count)
 {
-    printf("filename: %s\n", filename);
+    int function_count;
+    struct Function** functions = parse_file(filename, &function_count);
 
-    struct Function** functions;
-    printf("^^\n");
-    int func_count = parse_file(filename, functions);
-    printf(">>\n");
-    return;
-    /*
-    if (func_count < 0)
+    // Find the main function
+    struct Function* main_function = NULL;
+
+    for (int i = 0; i < function_count; i++)
     {
-        printf("Error parsing file [%s]\n", filename);
+        if (strcmp(functions[i]->name, "main") == 0)
+        {
+            main_function = functions[i];
+            break;
+        }
+    }
+
+    if (main_function == NULL)
+    {
+        printf("No main function found.\n");
         exit(0);
     }
 
-    for (int i = 0; i < func_count; i++)
+    if (main_function->arg_count != inputs_count)
     {
-        free_function(functions[i]);
+        printf("Main function requires %d inputs but only %d given.\n",
+                main_function->arg_count, inputs_count);
+        exit(0);
     }
 
-    free(functions);
-
-/*
     struct State* state = malloc(sizeof(struct State));
 
+    // Use CLI inputs as function arguments
     state->local_count = inputs_count;
     state->locals = malloc(inputs_count * sizeof(struct Local*));
     state->locals_owned = malloc(inputs_count * sizeof(bool));
@@ -276,14 +283,54 @@ void handle_run(const char* filename, char** inputs, int inputs_count)
     for (int i = 0; i < inputs_count; i++)
     {
         state->locals[i] = malloc(sizeof(struct Local));
-        state->locals[i]->name = ""; //TODO
-        state->locals[i]->value = ""; //TODO
+
+        // Strip preceding $ symbol from argument name if present
+        char* arg_name = main_function->args[i];
+        if (arg_name[0] == '$')
+        {
+            arg_name++;
+        }
+        state->locals[i]->name = strdup(arg_name);
+
+        state->locals[i]->value = malloc(sizeof(struct Value));
+        value_set_from_string(state->locals[i]->value, inputs[i]);
 
         state->locals_owned[i] = true;
     }
 
+    // Load function instructions into the state
+    state->instruction_count = main_function->inst_count;
+    state->instructions = malloc(
+            state->instruction_count * sizeof(struct Instruction*));
+    state->instructions_owned = malloc(
+            state->instruction_count * sizeof(bool));
+    for (int i = 0; i < state->instruction_count; i++)
+    {
+        state->instructions[i] = instruction_clone(&main_function->insts[i]);
+        state->instructions_owned[i] = false;
+    }
+
     state->ret = NULL;
-*/
+
+    // Run!
+    while (state->inst_ptr < state->instruction_count)
+        interpret(state);
+
+    // Output return value
+    char buf[255];
+    value_tostring(state->ret, buf, 255);
+    printf("Return: %s [%s]\n", buf, var_type_tostring(state->ret->type));
+
+    // Free stuff
+    free_state(state);
+
+    for (int i = 0; i < function_count; i++)
+    {
+        free_function(functions[i]);
+        free(functions[i]);
+    }
+
+    free(functions);
 }
 
 int main(int argc, char* argv[])
