@@ -246,6 +246,9 @@ void handle_solver(const char* solver_file)
 
 void handle_run(const char* filename, char** inputs, int inputs_count)
 {
+    const char* DEBUG_OUTPUT = "output/debug";
+    remove(DEBUG_OUTPUT);
+
     int function_count;
     struct Function** functions = parse_file(filename, &function_count);
 
@@ -313,13 +316,40 @@ void handle_run(const char* filename, char** inputs, int inputs_count)
 
     state->ret = NULL;
 
+    // Open file for debug output
+    FILE* file = fopen(DEBUG_OUTPUT, "a");
+    if (file == NULL)
+    {
+        printf("Error opening [%s] for writing.\n", DEBUG_OUTPUT);
+        exit(0);
+    }
+
+    const int BUF_LEN = 255;
+    char buf[BUF_LEN];
+
     // Run!
     while (state->inst_ptr < state->instruction_count)
+    {
+        // Output locals
+        for (int i = 0; i < state->local_count; i++)
+        {
+            value_tostring(state->locals[i]->value, buf, BUF_LEN);
+            fprintf(file, "  %s = %s [%s]\n", state->locals[i]->name, buf,
+                var_type_tostring(state->locals[i]->value->type));
+        }
+
+        // Output instruction to be run
+        instruction_tostring(state->instructions[state->inst_ptr],
+            buf, BUF_LEN);
+        fprintf(file, "%s\n", buf);
+
         interpret(state);
+    }
+
+    fclose(file);
 
     // Output return value
-    char buf[255];
-    value_tostring(state->ret, buf, 255);
+    value_tostring(state->ret, buf, BUF_LEN);
     printf("Return: %s [%s]\n", buf, var_type_tostring(state->ret->type));
 
     // Free stuff
