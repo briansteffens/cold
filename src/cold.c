@@ -12,6 +12,8 @@ char* var_type_tostring(enum VarType input)
         return "int";
     case TYPE_FLOAT:
         return "float";
+    case TYPE_LONG_DOUBLE:
+        return "long double";
     case TYPE_STRING:
         return "string";
     default:
@@ -26,6 +28,8 @@ enum VarType var_type_fromstring(char* input)
         return TYPE_INT;
     else if (strcmp(input, "float") == 0)
         return TYPE_FLOAT;
+    else if (strcmp(input, "long double") == 0)
+        return TYPE_LONG_DOUBLE;
     else if (strcmp(input, "string") == 0)
         return TYPE_STRING;
 
@@ -123,6 +127,14 @@ void value_set_float(struct Value* value, float val)
     *((float*)value->data) = val;
 }
 
+void value_set_long_double(struct Value* value, long double val)
+{
+    value->type = TYPE_LONG_DOUBLE;
+    value->size = sizeof(long double);
+    value->data = malloc(value->size);
+    *((long double*)value->data) = val;
+}
+
 void value_set_string(struct Value* value, char* val)
 {
     value->type = TYPE_STRING;
@@ -163,6 +175,26 @@ void value_set_from_string(struct Value* value, char* input)
 
         value_set_float(value, f);
     }
+    else if (type == 'D')
+    {
+        long double ld;
+
+        if (strchr(val, 'E'))
+        {
+            if (!sscanf(val, "%Le", &ld))
+            {
+                printf("Unable to parse [%s] as scientific notation\n", val);
+                exit(0);
+            }
+        }
+        else
+        {
+            printf("Unable to parse [%s] as long double\n", val);
+            exit(0);
+        }
+
+        value_set_long_double(value, ld);
+    }
     else
     {
         printf("ERROR: unrecognized constant type\n");
@@ -179,6 +211,9 @@ void value_tostring(struct Value* val, char* buf, int n)
         break;
     case TYPE_FLOAT:
         snprintf(buf, n, "%f", *((float*)val->data));
+        break;
+    case TYPE_LONG_DOUBLE:
+        snprintf(buf, n, "%Le", *((long double*)val->data));
         break;
     case TYPE_STRING:
         snprintf(buf, n, "%s", val->data);
@@ -215,6 +250,9 @@ void param_tostring(struct Param* p, char* buf, int n)
             break;
         case TYPE_FLOAT:
             prefix = 'f';
+            break;
+        case TYPE_LONG_DOUBLE:
+            prefix = 'D';
             break;
         default:
             printf("Unrecognized value type %d\n", p->value->type);

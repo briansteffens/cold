@@ -131,6 +131,11 @@ void parse_param(struct Param* param, char* src)
         // TODO: known issue that locale setting can mess this up
         value_set_float(param->value, strtod(src + 1, NULL));
     }
+    else if (src[0] == 'D')
+    {
+        param->type = PARAM_LITERAL;
+        value_set_from_string(param->value, src);
+    }
     else if (src[0] == '$')
     {
         param->type = PARAM_LABEL;

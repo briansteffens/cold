@@ -94,13 +94,7 @@ void handle_solver(const char* solver_file)
 
         if (starts_with(line, "precision "))
         {
-            if ((line + 10)[0] != 'f')
-            {
-                printf("Expected a float for precision declaration\n");
-                exit(0);
-            }
-
-            value_set_float(&ctx.precision, atof(line + 11));
+            value_set_from_string(&ctx.precision, line + 10);
         }
         else if (starts_with(line, "depth "))
         {

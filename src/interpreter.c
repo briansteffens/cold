@@ -106,6 +106,15 @@ bool compare(struct Context* ctx, struct Value* left, struct Value* right)
         float f_precision = *((float*)ctx->precision.data);
         return f_left >= f_right-f_precision && f_left <= f_right+f_precision;
     }
+    else if (left->type == TYPE_LONG_DOUBLE &&
+             right->type == TYPE_LONG_DOUBLE &&
+             ctx->precision.type == TYPE_LONG_DOUBLE)
+    {
+        long double f_left = *((long double*)left->data);
+        long double f_right = *((long double*)right->data);
+        long double f_precision = *((long double*)ctx->precision.data);
+        return f_left >= f_right-f_precision && f_left <= f_right+f_precision;
+    }
     else
     {
         printf("compare() can't support these types: %d == %d\n",
@@ -221,6 +230,32 @@ void interpret(struct State* state)
             case INST_EXP:
                 value_set_float(new_local->value,
                     powf(*((float*)left->data), *((float*)right->data)));
+                break;
+            }
+        }
+        else if (left->type == TYPE_LONG_DOUBLE &&
+                 right->type == TYPE_LONG_DOUBLE &&
+                 state->locals[target]->value->type == TYPE_LONG_DOUBLE)
+        {
+            switch (inst->type)
+            {
+            case INST_ADD:
+                value_set_long_double(new_local->value,
+                    *((long double*)left->data)+*((long double*)right->data));
+                break;
+            case INST_MUL:
+                value_set_long_double(new_local->value,
+                    *((long double*)left->data)**((long double*)right->data));
+                break;
+            case INST_DIV:
+                value_set_long_double(new_local->value,
+                    *((long double*)left->data) /
+                    *((long double*)right->data));
+                break;
+            case INST_EXP:
+                value_set_long_double(new_local->value,
+                    powf(*((long double*)left->data),
+                         *((long double*)right->data)));
                 break;
             }
         }
