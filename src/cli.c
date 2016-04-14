@@ -16,6 +16,7 @@ bool starts_with(const char* haystack, const char* needle)
 int usage()
 {
     printf("Usage: bin/cold solve solvers/emc2.solve\n");
+    printf("       bin/cold run examples/basic.cold i3\n");
     return 0;
 }
 
