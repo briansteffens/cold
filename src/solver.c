@@ -405,8 +405,32 @@ struct State** vary_patterns(struct Context* ctx, struct State* state,
     return ret;
 }
 
+// Write a program to a file
+void fprint_program(FILE* file, struct Instruction** instructions,
+    int instruction_count, char** args, int arg_count)
+{
+    const int BUF_LEN = 255;
+    char buf[BUF_LEN];
+
+    strncpy(buf, "def main", BUF_LEN);
+
+    for (int i = 0; i < arg_count; i++)
+    {
+        strncat(buf, " $", BUF_LEN);
+        strncat(buf, args[i], BUF_LEN);
+    }
+
+    fprintf(file, "%s\n", buf);
+
+    for (int i = 0; i < instruction_count; i++)
+    {
+        instruction_tostring(instructions[i], buf, BUF_LEN);
+        fprintf(file, "    %s\n", buf);
+    }
+}
+
 // Append a program to generated_programs file
-void fprint_program(struct Context* ctx, struct State* state)
+void fprint_generated_program(struct Context* ctx, struct State* state)
 {
     FILE* file = fopen(ctx->generated_programs_filename, "a");
 
@@ -417,14 +441,8 @@ void fprint_program(struct Context* ctx, struct State* state)
         exit(0);
     }
 
-    const int BUF_LEN = 255;
-    char buf[BUF_LEN];
-
-    for (int i = 0; i < state->instruction_count; i++)
-    {
-        instruction_tostring(state->instructions[i], buf, BUF_LEN);
-        fprintf(file, "%s\n", buf);
-    }
+    fprint_program(file, state->instructions, state->instruction_count,
+            ctx->input_names, ctx->input_count);
 
     fprintf(file, "\n");
 
@@ -443,7 +461,7 @@ void step_vary(struct Context* ctx, struct State* state)
         if (ctx->generated_programs_filename)
         {
             ctx->programs_completed++;
-            fprint_program(ctx, state);
+            fprint_generated_program(ctx, state);
         }
 
         return;

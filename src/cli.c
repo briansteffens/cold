@@ -22,6 +22,9 @@ int usage()
 
 void handle_solver(const char* solver_file)
 {
+    const char* SOLUTION_FILE = "output/solution.cold";
+    remove(SOLUTION_FILE);
+
     struct Context ctx;
 
     ctx.programs_completed = 0;
@@ -214,6 +217,23 @@ void handle_solver(const char* solver_file)
 
     // gogogo
     step(&ctx, root, 1);
+
+    // Write solution to solution file
+    if (ctx.solution_inst != NULL)
+    {
+        FILE* solution_file = fopen(SOLUTION_FILE, "a");
+
+        if (solution_file == 0)
+        {
+            printf("Failed to open solution file [%s]\n", SOLUTION_FILE);
+            return;
+        }
+
+        fprint_program(solution_file, ctx.solution_inst,
+                ctx.solution_inst_count, ctx.input_names, ctx.input_count);
+
+        fclose(solution_file);
+    }
 
     print_status(&ctx, true);
     printf("\n");

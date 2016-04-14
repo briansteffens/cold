@@ -3,3 +3,5 @@ void step(struct Context* ctx, struct State** states, int state_count);
 bool add_pattern(struct Context* ctx, const char* filename);
 void free_pattern(struct Pattern* pattern);
 struct Instruction* instruction_clone(struct Instruction* orig);
+void fprint_program(FILE* file, struct Instruction** instructions,
+    int instruction_count, char** args, int arg_count);
