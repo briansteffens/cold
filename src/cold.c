@@ -246,7 +246,7 @@ void instruction_tostring(struct Instruction* input, char* buf, int n)
     for (int i = 0; i < input->param_count; i++)
     {
         if (i > 0 && i < input->param_count)
-            strncat(buf, ", ", n - strlen(buf) - 2);
+            strncat(buf, " ", n - strlen(buf) - 2);
 
         param_tostring(input->params[i], param, 100);
         strncat(buf, param, n - strlen(buf) - strlen(param));
