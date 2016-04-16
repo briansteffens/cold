@@ -20,8 +20,28 @@ int usage()
     return 0;
 }
 
-void handle_solver(const char* solver_file)
+void handle_solver(int argc, char* argv[])
 {
+    char* solver_file = NULL;
+    int specify_assembly_index = -1;
+
+    for (int i = 0; i < argc; i++)
+    {
+        if (starts_with(argv[i], "--assembly="))
+        {
+            specify_assembly_index = atoi(argv[i] + 11);
+        }
+        else
+        {
+            solver_file = argv[i];
+        }
+    }
+
+    if (solver_file == NULL)
+    {
+        usage();
+    }
+
     const char* SOLUTION_FILE = "output/solution.cold";
     remove(SOLUTION_FILE);
 
@@ -180,13 +200,23 @@ void handle_solver(const char* solver_file)
 
     // Setup pattern mask
     ctx.pattern_mask = malloc(ctx.depth * sizeof(bool*));
+    int assembly_index = 0;
 
     for (int i = 0; i < ctx.depth; i++)
     {
         ctx.pattern_mask[i] = malloc(ctx.pattern_count * sizeof(bool));
         for (int j = 0; j < ctx.pattern_count; j++)
         {
-            ctx.pattern_mask[i][j] = true;
+            if (specify_assembly_index >= 0)
+            {
+                ctx.pattern_mask[i][j] =
+                    assembly_index == specify_assembly_index;
+            }
+            else
+            {
+                ctx.pattern_mask[i][j] = true;
+            }
+            assembly_index++;
         }
     }
 
@@ -387,7 +417,7 @@ int main(int argc, char* argv[])
 
     if (strcmp(argv[1], "solve") == 0)
     {
-        handle_solver(argv[2]);
+        handle_solver(argc - 2, argv + 2);
     }
     else if (strcmp(argv[1], "run") == 0)
     {
