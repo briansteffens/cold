@@ -20,6 +20,54 @@ int usage()
     return 0;
 }
 
+int exponent(int value, int power)
+{
+    int ret = value;
+
+    for (int i = 1; i < power; i++)
+    {
+        ret *= value;
+    }
+
+    return ret;
+}
+
+void permute(int result[], int max_depth, int patterns, int target)
+{
+    int total_permutations = exponent(patterns, max_depth);
+
+    int inverse_depth = 0;
+    for (int d = max_depth - 1; d >= 0; d--)
+    {
+        int repeat = 1;
+        if (inverse_depth > 0)
+        {
+            repeat = exponent(patterns, inverse_depth);
+        }
+
+        int permutation = 0;
+        while (permutation < total_permutations)
+        {
+            for (int p = 0; p < patterns; p++)
+            {
+                for (int r = 0; r < repeat; r++)
+                {
+                    if (permutation == target)
+                    {
+                        result[d] = p;
+                        goto level_done;
+                    }
+
+                    permutation++;
+                }
+            }
+        }
+
+        level_done:
+        inverse_depth++;
+    }
+}
+
 void handle_solver(int argc, char* argv[])
 {
     char* solver_file = NULL;
@@ -200,23 +248,31 @@ void handle_solver(int argc, char* argv[])
 
     // Setup pattern mask
     ctx.pattern_mask = malloc(ctx.depth * sizeof(bool*));
-    int assembly_index = 0;
 
     for (int i = 0; i < ctx.depth; i++)
     {
         ctx.pattern_mask[i] = malloc(ctx.pattern_count * sizeof(bool));
+
         for (int j = 0; j < ctx.pattern_count; j++)
         {
-            if (specify_assembly_index >= 0)
+            ctx.pattern_mask[i][j] = true;
+        }
+    }
+
+    // Restrict pattern mask to specified assembly
+    if (specify_assembly_index >= 0)
+    {
+        int assembly_patterns[ctx.depth];
+
+        permute(assembly_patterns, ctx.depth, ctx.pattern_count,
+                specify_assembly_index);
+
+        for (int d = 0; d < ctx.depth; d++)
+        {
+            for (int p = 0; p < ctx.pattern_count; p++)
             {
-                ctx.pattern_mask[i][j] =
-                    assembly_index == specify_assembly_index;
+                ctx.pattern_mask[d][p] = assembly_patterns[d] == p;
             }
-            else
-            {
-                ctx.pattern_mask[i][j] = true;
-            }
-            assembly_index++;
         }
     }
 
