@@ -19,7 +19,7 @@ void handle_solver(int argc, char* argv[])
 {
     char* solver_file = NULL;
     int assembly_index = -1;
-    int assembly_count = 1;
+    int assembly_count = -1;
     bool output_generated = false;
     int threads = 1;
 

@@ -379,7 +379,8 @@ void check_cases(struct Context* ctx, struct State* base, struct Local* found)
         }
 
         states[0]->instructions[states[0]->instruction_count - 1] = ret_inst;
-        states[0]->instructions_owned[states[0]->instruction_count - 1] = false;
+        states[0]->instructions_owned[states[0]->instruction_count - 1] =
+                false;
 
         states[0]->inst_ptr = 0;
         while (states[0]->inst_ptr < states[0]->instruction_count)
@@ -690,54 +691,32 @@ void free_pattern(struct Pattern* pattern)
     free(pattern);
 }
 
-void* solve_thread(void* ptr)
+void parse_solver_file(struct Context* ctx, const char* solver_file)
 {
-    struct SolveThreadArgs* args = (struct SolveThreadArgs*)ptr;
-
-    struct Context ctx;
-
-    ctx.generated_programs_filename = NULL;
-
-    if (args->output_generated)
-    {
-        // Output all generated programs to this file
-        ctx.generated_programs_filename = "output/generated_programs";
-        remove(ctx.generated_programs_filename);
-    }
-
-    const char* SOLUTION_FILE = "output/solution.cold";
-    remove(SOLUTION_FILE);
-
-    ctx.programs_completed = 0;
-
     // Default float precision
-    value_set_float(&ctx.precision, 0.0f);
+    value_set_float(&ctx->precision, 0.0f);
 
     // Default pattern depth
-    ctx.depth = 3;
+    ctx->depth = 3;
 
-    ctx.pattern_count = 0;
-    ctx.patterns = malloc(0);
+    ctx->pattern_count = 0;
+    ctx->patterns = malloc(0);
 
-    ctx.constant_count = 0;
-    ctx.constants = malloc(0);
+    ctx->constant_count = 0;
+    ctx->constants = malloc(0);
 
-    ctx.input_count = 0;
-    ctx.input_names = malloc(0);
+    ctx->input_count = 0;
+    ctx->input_names = malloc(0);
 
-    ctx.case_count = 0;
-    ctx.cases = malloc(0);
+    ctx->case_count = 0;
+    ctx->cases = malloc(0);
 
-    ctx.solution_inst = NULL;
-    ctx.solution_inst_count = 0;
-
-    // Read solve file
-    FILE* file = fopen(args->solver_file, "r");
+    FILE* file = fopen(solver_file, "r");
 
     if (file == 0)
     {
-        printf("Failed to open source file [%s]\n", args->solver_file);
-        return NULL;
+        printf("Failed to open source file [%s]\n", solver_file);
+        exit(EXIT_FAILURE);
     }
 
     int line_count;
@@ -767,12 +746,12 @@ void* solve_thread(void* ptr)
 
         if (starts_with(line, "precision "))
         {
-            free(ctx.precision.data);
-            value_set_from_string(&ctx.precision, line + 10);
+            free(ctx->precision.data);
+            value_set_from_string(&ctx->precision, line + 10);
         }
         else if (starts_with(line, "depth "))
         {
-            ctx.depth = atoi(line + 6);
+            ctx->depth = atoi(line + 6);
         }
         else if (starts_with(line, "pattern "))
         {
@@ -782,42 +761,42 @@ void* solve_thread(void* ptr)
             strcat(fn, line + 8);
             strcat(fn, ".pattern");
 
-            add_pattern(&ctx, fn);
+            add_pattern(ctx, fn);
         }
         else if (starts_with(line, "constant "))
         {
-            ctx.constant_count++;
-            ctx.constants = realloc(ctx.constants,
-                    ctx.constant_count * sizeof(struct Value));
+            ctx->constant_count++;
+            ctx->constants = realloc(ctx->constants,
+                    ctx->constant_count * sizeof(struct Value));
 
-            value_set_from_string(&ctx.constants[ctx.constant_count - 1],
+            value_set_from_string(&ctx->constants[ctx->constant_count - 1],
                     line + 9);
         }
         else if (starts_with(line, "input "))
         {
-            ctx.input_count++;
-            ctx.input_names = realloc(ctx.input_names,
-                    ctx.input_count * sizeof(char*));
+            ctx->input_count++;
+            ctx->input_names = realloc(ctx->input_names,
+                    ctx->input_count * sizeof(char*));
 
-            ctx.input_names[ctx.input_count - 1] = strdup(line + 6);
+            ctx->input_names[ctx->input_count - 1] = strdup(line + 6);
         }
         else if (starts_with(line, "case "))
         {
             // Allocate a new case
-            ctx.case_count++;
-            ctx.cases = realloc(ctx.cases,
-                    ctx.case_count * sizeof(struct Case));
+            ctx->case_count++;
+            ctx->cases = realloc(ctx->cases,
+                    ctx->case_count * sizeof(struct Case));
 
-            struct Case* new_case = &ctx.cases[ctx.case_count - 1];
+            struct Case* new_case = &ctx->cases[ctx->case_count - 1];
 
             new_case->input_values = malloc(
-                    ctx.input_count * sizeof(struct Value));
+                    ctx->input_count * sizeof(struct Value));
 
             // Split parameters
             int part_count = 0;
             char** parts = split(line + 5, ' ', &part_count);
 
-            if (part_count - 1 != ctx.input_count)
+            if (part_count - 1 != ctx->input_count)
             {
                 printf("ERROR: case parameter count must match input count\n");
                 exit(0);
@@ -851,6 +830,32 @@ void* solve_thread(void* ptr)
     }
 
     free(lines);
+}
+
+void* solve_thread(void* ptr)
+{
+    struct SolveThreadArgs* args = (struct SolveThreadArgs*)ptr;
+
+    struct Context ctx;
+
+    ctx.generated_programs_filename = NULL;
+
+    if (args->output_generated)
+    {
+        // Output all generated programs to this file
+        ctx.generated_programs_filename = "output/generated_programs";
+        remove(ctx.generated_programs_filename);
+    }
+
+    const char* SOLUTION_FILE = "output/solution.cold";
+    remove(SOLUTION_FILE);
+
+    ctx.programs_completed = 0;
+
+    ctx.solution_inst = NULL;
+    ctx.solution_inst_count = 0;
+
+    parse_solver_file(&ctx, args->solver_file);
 
     // Setup pattern mask
     ctx.pattern_mask = malloc(ctx.depth * sizeof(bool*));
@@ -994,6 +999,16 @@ void solve(const char* solver_file, int threads, int assembly_start,
     for (int i = 0; i < threads; i++)
     {
         info[i].started = false;
+    }
+
+    // All assemblies
+    if (assembly_start == -1 && assembly_count == -1)
+    {
+        struct Context ctx;
+        parse_solver_file(&ctx, solver_file);
+
+        assembly_start = 0;
+        assembly_count = exponent(ctx.pattern_count, ctx.depth);
     }
 
     while (true)
