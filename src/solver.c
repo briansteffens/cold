@@ -19,23 +19,8 @@ struct SolveThreadArgs
 
     // Return values (write by solve_thread, read by solve)
     bool ret_done;
+    int ret_programs_completed;
 };
-
-void print_status(struct Context* ctx, bool always)
-{
-    static time_t last = 0;
-    time_t now = time(NULL);
-
-    if (!always && now == last)
-    {
-        return;
-    }
-
-    printf("\rprograms completed: %d", ctx->programs_completed);
-    fflush(stdout);
-
-    last = now;
-}
 
 // Load a pattern file into a context
 bool add_pattern(struct Context* ctx, const char* filename)
@@ -584,7 +569,7 @@ void step_vary(struct Context* ctx, struct State* state)
 {
     if (is_execution_finished(state))
     {
-        ctx->programs_completed++;
+        (*ctx->programs_completed)++;
 
         if (ctx->generated_programs_filename)
         {
@@ -634,8 +619,6 @@ void step_vary(struct Context* ctx, struct State* state)
 
 void step(struct Context* ctx, struct State** states, int state_count)
 {
-    print_status(ctx, false);
-
     for (int i = 0; i < state_count; i++)
     {
         // If the instruction to be interpreted is a "NEXT", it needs to be
@@ -850,7 +833,7 @@ void* solve_thread(void* ptr)
     const char* SOLUTION_FILE = "output/solution.cold";
     remove(SOLUTION_FILE);
 
-    ctx.programs_completed = 0;
+    ctx.programs_completed = &args->ret_programs_completed;
 
     ctx.solution_inst = NULL;
     ctx.solution_inst_count = 0;
@@ -927,9 +910,6 @@ void* solve_thread(void* ptr)
         fclose(solution_file);
     }
 
-    print_status(&ctx, true);
-    printf("\n");
-
     // Free the root state
     free_state(root[0]);
     free(root);
@@ -990,6 +970,25 @@ struct SolveThreadInfo
     bool started;
 };
 
+void print_total_status(struct SolveThreadInfo info[], int threads,
+        int completed_by_old_threads)
+{
+    int total_completed = completed_by_old_threads;
+
+    for (int i = 0; i < threads; i++)
+    {
+        if (!info[i].started)
+        {
+            continue;
+        }
+
+        total_completed += info[i].args.ret_programs_completed;
+    }
+
+    printf("\rprograms completed: %d", total_completed);
+    fflush(stdout);
+}
+
 void solve(const char* solver_file, int threads, int assembly_start,
         int assembly_count)
 {
@@ -999,6 +998,8 @@ void solve(const char* solver_file, int threads, int assembly_start,
     for (int i = 0; i < threads; i++)
     {
         info[i].started = false;
+        info[i].args.ret_done = false;
+        info[i].args.ret_programs_completed = 0;
     }
 
     // All assemblies
@@ -1010,6 +1011,9 @@ void solve(const char* solver_file, int threads, int assembly_start,
         assembly_start = 0;
         assembly_count = exponent(ctx.pattern_count, ctx.depth);
     }
+
+    int completed_by_old_threads = 0;
+    static time_t last = 0;
 
     while (true)
     {
@@ -1024,6 +1028,10 @@ void solve(const char* solver_file, int threads, int assembly_start,
 
                 pthread_join(info[i].thread, NULL);
                 info[i].started = false;
+                info[i].args.ret_done = false;
+                completed_by_old_threads +=
+                    info[i].args.ret_programs_completed;
+                info[i].args.ret_programs_completed = 0;
             }
 
             if (assembly + 1 >= assembly_count)
@@ -1066,9 +1074,19 @@ void solve(const char* solver_file, int threads, int assembly_start,
             info[i].started = true;
         }
 
+        time_t now = time(NULL);
+
+        if (now > last)
+        {
+            print_total_status(info, threads, completed_by_old_threads);
+            last = now;
+        }
+
         sleep(0);
     }
 
     all_done:
+    print_total_status(info, threads, completed_by_old_threads);
+    printf("\n");
     exit(EXIT_SUCCESS);
 }
