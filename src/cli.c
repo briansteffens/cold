@@ -19,6 +19,7 @@ void handle_solver(int argc, char* argv[])
 {
     char* solver_file = NULL;
     int assembly_index = -1;
+    int assembly_count = 1;
     bool output_generated = false;
     int threads = 1;
 
@@ -29,6 +30,10 @@ void handle_solver(int argc, char* argv[])
         if (starts_with(argv[i], "--assembly="))
         {
             assembly_index = atoi(argv[i] + 11);
+        }
+        else if (starts_with(argv[i], "--assembly-count="))
+        {
+            assembly_count = atoi(argv[i] + 17);
         }
         else if (strcmp(argv[i], "--output-all") == 0)
         {
@@ -50,7 +55,7 @@ void handle_solver(int argc, char* argv[])
         return;
     }
 
-    solve(solver_file, threads, assembly_index, 4);
+    solve(solver_file, threads, assembly_index, assembly_count);
 }
 
 void handle_run(const char* filename, char** inputs, int inputs_count)
