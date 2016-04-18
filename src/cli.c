@@ -163,6 +163,7 @@ void handle_solver(int argc, char* argv[])
 
         if (starts_with(line, "precision "))
         {
+            free(ctx.precision.data);
             value_set_from_string(&ctx.precision, line + 10);
         }
         else if (starts_with(line, "depth "))
@@ -434,10 +435,11 @@ void handle_run(const char* filename, char** inputs, int inputs_count)
     for (int i = 0; i < state->instruction_count; i++)
     {
         state->instructions[i] = instruction_clone(&main_function->insts[i]);
-        state->instructions_owned[i] = false;
+        state->instructions_owned[i] = true;
     }
 
     state->ret = NULL;
+    state->inst_ptr = 0;
 
     // Open file for debug output
     FILE* file = fopen(DEBUG_OUTPUT, "a");

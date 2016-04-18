@@ -331,6 +331,8 @@ void instruction_free(struct Instruction* inst)
 
 void free_function(struct Function* func)
 {
+    free(func->name);
+
     for (int i = 0; i < func->arg_count; i++)
     {
         free(func->args[i]);

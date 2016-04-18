@@ -41,6 +41,7 @@ struct Value* value_clone(const struct Value* src)
 void local_free(struct Local* local)
 {
     value_free(local->value);
+    free(local->name);
     free(local);
 }
 
@@ -173,7 +174,7 @@ void interpret(struct State* state)
         struct Value* right = resolve(state, inst->params[2]);
 
         struct Local* new_local = malloc(sizeof(struct Local));
-        new_local->name = state->locals[target]->name;
+        new_local->name = strdup(state->locals[target]->name);
         new_local->value = malloc(sizeof(struct Value));
 
         if (left->type == TYPE_INT && right->type == TYPE_INT &&
@@ -348,7 +349,7 @@ struct State* setup_state(struct Context* ctx, int case_index)
     for (int i = 0; i < ctx->input_count; i++)
     {
         ret->locals[i] = malloc(sizeof(struct Local));
-        ret->locals[i]->name = ctx->input_names[i];
+        ret->locals[i]->name = strdup(ctx->input_names[i]);
         ret->locals[i]->value =
             value_clone(&ctx->cases[case_index].input_values[i]);
 

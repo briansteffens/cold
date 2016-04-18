@@ -225,6 +225,10 @@ struct Function** parse(char** lines, int line_count, int* out_count)
                               part_count);
         }
 
+        for (int p = 0; p < part_count; p++)
+        {
+            free(parts[p]);
+        }
         free(parts);
     }
 
