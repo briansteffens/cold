@@ -1,3 +1,9 @@
+#include <execinfo.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+void print_trace();
+
 typedef enum { false, true } bool;
 
 enum VarType

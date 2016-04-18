@@ -4,6 +4,24 @@
 
 #include "cold.h"
 
+void print_trace()
+{
+    void* array[10];
+    size_t size;
+    char** strings;
+    size_t i;
+
+    size = backtrace(array, 10);
+    strings = backtrace_symbols(array, size);
+
+    for (i = 0; i < size; i++)
+    {
+        printf("  %s\n", strings[i]);
+    }
+
+    free(strings);
+}
+
 char* var_type_tostring(enum VarType input)
 {
     switch (input)
@@ -305,7 +323,6 @@ void instruction_free(struct Instruction* inst)
     for (int i = 0; i < inst->param_count; i++)
     {
         value_free(inst->params[i]->value);
-        printf("\nFREE PARAM %d\n", inst->params[i]);
         free(inst->params[i]);
     }
 

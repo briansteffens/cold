@@ -327,6 +327,14 @@ void handle_solver(int argc, char* argv[])
     // Free the context
     free(ctx.precision.data);
 
+    for (int i = 0; i < ctx.solution_inst_count; i++)
+    {
+        instruction_free(ctx.solution_inst[i]);
+        free(ctx.solution_inst[i]);
+    }
+
+    free(ctx.solution_inst);
+
     for (int i = 0; i < ctx.constant_count; i++)
     {
         free(ctx.constants[i].data);

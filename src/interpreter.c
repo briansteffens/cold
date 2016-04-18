@@ -251,6 +251,11 @@ void interpret(struct State* state)
             exit(0);
         }
 
+        if (state->locals_owned[target])
+        {
+            local_free(state->locals[target]);
+        }
+
         state->locals[target] = new_local;
         state->locals_owned[target] = true;
 

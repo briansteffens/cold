@@ -74,7 +74,6 @@ struct Instruction* instruction_clone(struct Instruction* orig)
 
         char buf[255];
         instruction_tostring(orig, buf, 255);
-        printf("\nMALLOC %d %d %s\n", ret->params[i], ret->params[i]->type, buf);
     }
 
     return ret;
@@ -152,6 +151,10 @@ struct Instruction** vary_instructions(struct Context* ctx,
         for (int p = 0; p < param_count; p++)
         {
             struct Instruction* new_inst = instruction_clone(inst);
+
+            value_free(new_inst->params[i]->value);
+            free(new_inst->params[i]);
+
             new_inst->params[i] = varied[p];
 
             // Since there can be multiple pattern params in an instruction,
@@ -281,7 +284,9 @@ void check_cases(struct Context* ctx, struct State* base, struct Local* found)
 
         states[0]->inst_ptr = 0;
         while (states[0]->inst_ptr < states[0]->instruction_count)
+        {
             interpret(states[0]);
+        }
 
         bool success = true;
         if (!compare(ctx, states[0]->ret, &ctx->cases[i].expected))
@@ -306,6 +311,7 @@ void check_cases(struct Context* ctx, struct State* base, struct Local* found)
             break;
     }
 
+    instruction_free(ret_inst);
     free(ret_inst);
     free(states);
 }
