@@ -22,6 +22,7 @@ void handle_solver(int argc, char* argv[])
     int assembly_count = -1;
     bool output_generated = false;
     int threads = 1;
+    bool interactive = true;
 
     struct Context ctx;
 
@@ -43,6 +44,10 @@ void handle_solver(int argc, char* argv[])
         {
             threads = atoi(argv[i] + 10);
         }
+        else if (strcmp(argv[i], "--non-interactive") == 0)
+        {
+            interactive = false;
+        }
         else
         {
             solver_file = argv[i];
@@ -55,7 +60,7 @@ void handle_solver(int argc, char* argv[])
         return;
     }
 
-    solve(solver_file, threads, assembly_index, assembly_count);
+    solve(solver_file, threads, assembly_index, assembly_count, interactive);
 }
 
 void handle_run(const char* filename, char** inputs, int inputs_count)

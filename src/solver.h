@@ -6,4 +6,4 @@ struct Instruction* instruction_clone(struct Instruction* orig);
 void fprint_program(FILE* file, struct Instruction** instructions,
     int instruction_count, char** args, int arg_count);
 void solve(const char* solver_file, int threads, int assembly_start,
-        int assembly_count);
+        int assembly_count, bool interactive);
