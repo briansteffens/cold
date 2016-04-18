@@ -3,7 +3,7 @@
 Find a program for E=MC^2:
 
 ```bash
-bin/cold solve solvers/emc2.solve
+bin/cold solve --output-all solvers/emc2.solve
 ```
 
 View all programs generated in the process:

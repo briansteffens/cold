@@ -73,11 +73,18 @@ void handle_solver(int argc, char* argv[])
     char* solver_file = NULL;
     int specify_assembly_index = -1;
 
+    struct Context ctx;
+
     for (int i = 0; i < argc; i++)
     {
         if (starts_with(argv[i], "--assembly="))
         {
             specify_assembly_index = atoi(argv[i] + 11);
+        }
+        else if (strcmp(argv[i], "--output-all") == 0)
+        {
+            // Output all generated programs to this file
+            ctx.generated_programs_filename = "output/generated_programs";
         }
         else
         {
@@ -93,12 +100,7 @@ void handle_solver(int argc, char* argv[])
     const char* SOLUTION_FILE = "output/solution.cold";
     remove(SOLUTION_FILE);
 
-    struct Context ctx;
-
     ctx.programs_completed = 0;
-
-    // Output all generated programs to this file
-    ctx.generated_programs_filename = "output/generated_programs";
 
     // If outputing generated programs, delete the last output first
     if (ctx.generated_programs_filename)

@@ -484,9 +484,10 @@ void step_vary(struct Context* ctx, struct State* state)
 {
     if (is_execution_finished(state))
     {
+        ctx->programs_completed++;
+
         if (ctx->generated_programs_filename)
         {
-            ctx->programs_completed++;
             fprint_generated_program(ctx, state);
         }
 
