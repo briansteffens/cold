@@ -971,7 +971,7 @@ struct SolveThreadInfo
 };
 
 void print_total_status(struct SolveThreadInfo info[], int threads,
-        int completed_by_old_threads)
+        int completed_by_old_threads, time_t program_start)
 {
     int total_completed = completed_by_old_threads;
 
@@ -985,7 +985,11 @@ void print_total_status(struct SolveThreadInfo info[], int threads,
         total_completed += info[i].args.ret_programs_completed;
     }
 
-    printf("\rprograms completed: %d", total_completed);
+    size_t now = time(NULL);
+    float run_rate = (float)total_completed / (float)(now - program_start);
+
+    printf("\rprograms completed: %d, running %.0f/sec", total_completed,
+            run_rate);
     fflush(stdout);
 }
 
@@ -1014,6 +1018,7 @@ void solve(const char* solver_file, int threads, int assembly_start,
 
     int completed_by_old_threads = 0;
     static time_t last = 0;
+    time_t program_start = time(NULL);
 
     while (true)
     {
@@ -1078,7 +1083,8 @@ void solve(const char* solver_file, int threads, int assembly_start,
 
         if (now > last)
         {
-            print_total_status(info, threads, completed_by_old_threads);
+            print_total_status(info, threads, completed_by_old_threads,
+                    program_start);
             last = now;
         }
 
@@ -1086,7 +1092,7 @@ void solve(const char* solver_file, int threads, int assembly_start,
     }
 
     all_done:
-    print_total_status(info, threads, completed_by_old_threads);
+    print_total_status(info, threads, completed_by_old_threads, program_start);
     printf("\n");
     exit(EXIT_SUCCESS);
 }
