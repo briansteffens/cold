@@ -68,8 +68,13 @@ struct Instruction* instruction_clone(struct Instruction* orig)
     for (int i = 0; i < ret->param_count; i++)
     {
         ret->params[i] = malloc(sizeof(struct Param));
+
         ret->params[i]->type = orig->params[i]->type;
         ret->params[i]->value = value_clone(orig->params[i]->value);
+
+        char buf[255];
+        instruction_tostring(orig, buf, 255);
+        printf("\nMALLOC %d %d %s\n", ret->params[i], ret->params[i]->type, buf);
     }
 
     return ret;
@@ -157,13 +162,27 @@ struct Instruction** vary_instructions(struct Context* ctx,
 
             // Combine the result of the recursion with any results from this
             // run of the function
+            // TODO: recursion isn't a great way to do this, rework function
             ret = realloc(ret, (*instruction_count + recur_count) *
                           sizeof(struct Instruction*));
 
+            bool was_new_inst_replaced = true;
+
             for (int j = 0; j < recur_count; j++)
             {
+                if (recurs[j] == new_inst)
+                {
+                    was_new_inst_replaced = false;
+                }
+
                 ret[*instruction_count] = recurs[j];
                 *instruction_count = *instruction_count + 1;
+            }
+
+            if (was_new_inst_replaced)
+            {
+                instruction_free(new_inst);
+                free(new_inst);
             }
 
             free(recurs);
@@ -193,7 +212,8 @@ struct State** vary(struct Context* ctx, struct State* input, int* state_count)
     // If the instruction was varied (forked into multiple instructions),
     // then they are new copies and the new forked states "own" them.
     // Otherwise they're pointing to the input state's instruction.
-    bool did_vary = (*state_count > 1);
+    bool did_vary = (*state_count > 1 ||
+            input->instructions[input->inst_ptr] != insts[0]);
 
     struct State** ret = malloc(*state_count * sizeof(struct State*));
 
@@ -538,7 +558,9 @@ void step(struct Context* ctx, struct State** states, int state_count)
                 // was performed, in which case this function didn't "create"
                 // the fork, so we shouldn't free it here.
                 if (patterned[j] != states[i])
+                {
                     free_state(patterned[j]);
+                }
             }
 
             free(patterned);
@@ -586,6 +608,10 @@ bool add_pattern(struct Context* ctx, const char* filename)
 
         parse_instruction(ret->insts[ret->inst_count - 1], parts, part_count);
 
+        for (int j = 0; j < part_count; j++)
+        {
+            free(parts[j]);
+        }
         free(parts);
         free(lines[i]);
     }

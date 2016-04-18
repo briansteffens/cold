@@ -157,6 +157,7 @@ void handle_solver(int argc, char* argv[])
             raw = strdup(lines[i]);
         }
 
+        free(lines[i]);
         char* line = trim(raw);
         free(raw);
 
@@ -291,6 +292,7 @@ void handle_solver(int argc, char* argv[])
     root[0]->instructions[0] = malloc(sizeof(struct Instruction));
     root[0]->instructions[0]->type = INST_NEXT;
     root[0]->instructions[0]->pattern_depth = -1;
+    root[0]->instructions_owned[0] = true;
     params_allocate(root[0]->instructions[0], 0);
 
     root[0]->inst_ptr = 0;
@@ -323,8 +325,12 @@ void handle_solver(int argc, char* argv[])
     free(root);
 
     // Free the context
+    free(ctx.precision.data);
+
     for (int i = 0; i < ctx.constant_count; i++)
-        value_free(&ctx.constants[i]);
+    {
+        free(ctx.constants[i].data);
+    }
     free(ctx.constants);
 
     for (int i = 0; i < ctx.input_count; i++)
@@ -332,7 +338,16 @@ void handle_solver(int argc, char* argv[])
     free(ctx.input_names);
 
     for (int i = 0; i < ctx.case_count; i++)
+    {
+        free(ctx.cases[i].expected.data);
+
+        for (int j = 0; j < ctx.input_count; j++)
+        {
+            free(ctx.cases[i].input_values[j].data);
+        }
+
         free(ctx.cases[i].input_values);
+    }
     free(ctx.cases);
 
     for (int i = 0; i < ctx.pattern_count; i++)

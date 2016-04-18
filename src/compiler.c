@@ -12,8 +12,8 @@ bool is_whitespace(char c)
 
 char* trim(const char* input)
 {
-    int content_start;
-    int content_end;
+    int content_start = 0;
+    int content_end = 0;
 
     int input_len = strlen(input);
 

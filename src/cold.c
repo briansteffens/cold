@@ -224,6 +224,13 @@ void value_tostring(struct Value* val, char* buf, int n)
     }
 }
 
+// Free a Value and its associated data
+void value_free(struct Value* value)
+{
+    free(value->data);
+    free(value);
+}
+
 void params_allocate(struct Instruction* inst, int param_count)
 {
     inst->params = malloc(param_count * sizeof(struct Param*));
@@ -291,6 +298,20 @@ void instruction_tostring(struct Instruction* input, char* buf, int n)
     }
 }
 
+// Free an instruction and its associated paramaters and their values
+void instruction_free(struct Instruction* inst)
+{
+    // TODO: free the actual inst here?
+    for (int i = 0; i < inst->param_count; i++)
+    {
+        value_free(inst->params[i]->value);
+        printf("\nFREE PARAM %d\n", inst->params[i]);
+        free(inst->params[i]);
+    }
+
+    free(inst->params);
+}
+
 void free_function(struct Function* func)
 {
     for (int i = 0; i < func->arg_count; i++)
@@ -299,6 +320,11 @@ void free_function(struct Function* func)
     }
 
     free(func->args);
+
+    for (int i = 0; i < func->inst_count; i++)
+    {
+        instruction_free(&func->insts[i]);
+    }
 
     free(func->insts);
 }

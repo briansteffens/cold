@@ -37,12 +37,6 @@ struct Value* value_clone(const struct Value* src)
     return ret;
 }
 
-// Free a Value and its associated data
-void value_free(const struct Value* value)
-{
-    free(value->data);
-}
-
 // Free a local and its associated value
 void local_free(struct Local* local)
 {
@@ -65,15 +59,6 @@ void value_print(const struct Value* value)
         printf("UNRECOGNIZED TYPE");
         break;
     }
-}
-
-// Free an instruction and its associated paramaters and their values
-void instruction_free(struct Instruction* inst)
-{
-    for (int i = 0; i < inst->param_count; i++)
-        value_free(inst->params[i]->value);
-
-    free(inst->params);
 }
 
 // Resolve an instruction parameter (label/literal) to its actual value
@@ -325,16 +310,23 @@ void interpret(struct State* state)
 void free_state(struct State* state)
 {
     for (int i = 0; i < state->instruction_count; i++)
+    {
         if (state->instructions_owned[i])
+        {
             instruction_free(state->instructions[i]);
+            free(state->instructions[i]);
+        }
+    }
 
     free(state->instructions);
+    free(state->instructions_owned);
 
     for (int i = 0; i < state->local_count; i++)
         if (state->locals_owned[i])
             local_free(state->locals[i]);
 
     free(state->locals);
+    free(state->locals_owned);
 
     free(state);
 }

@@ -1,0 +1,9 @@
+# x = 2x + 1
+
+depth 1
+
+pattern add
+
+input z
+
+case i2 i20

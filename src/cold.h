@@ -1,4 +1,3 @@
-
 typedef enum { false, true } bool;
 
 enum VarType
@@ -57,6 +56,7 @@ void value_set_int(struct Value* value, int val);
 void value_set_float(struct Value* value, float val);
 void value_set_long_double(struct Value* value, long double val);
 void value_set_from_string(struct Value* value, char* input);
+void value_free(struct Value* value);
 
 struct Local
 {
@@ -83,6 +83,7 @@ struct Instruction
 void params_allocate(struct Instruction* inst, int param_count);
 
 void instruction_tostring(struct Instruction* input, char* buf, int n);
+void instruction_free(struct Instruction* inst);
 
 struct State
 {
