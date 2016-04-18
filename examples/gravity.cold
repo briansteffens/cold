@@ -1,0 +1,6 @@
+def main $m1 $m2 $r
+    exp $r $r D2E0
+    mul $m1 $m1 $m2
+    div $m1 $m1 $r
+    mul $m1 $m1 D6.67408E-11
+    ret $m1
