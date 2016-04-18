@@ -5,6 +5,7 @@
 #include <time.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <sys/stat.h>
 
 #include "cold.h"
 #include "interpreter.h"
@@ -14,7 +15,7 @@ struct SolveThreadArgs
 {
     // Input args (write by solve, read by solve_thread)
     const char* solver_file;
-    const char* output_dir;
+    char* output_dir;
     int assembly;
     bool output_generated;
 
@@ -831,15 +832,13 @@ void* solve_thread(void* ptr)
         remove(ctx.generated_programs_filename);
     }
 
+    // Create the output directory
+    mkdir(args->output_dir, 0777);
+
     // Build the solution file output path
     char solution_fn[255];
     strcpy(solution_fn, args->output_dir);
-    if (solution_fn[strlen(solution_fn) - 1] != '/')
-    {
-        strcat(solution_fn, "/");
-    }
     strcat(solution_fn, "solution.cold");
-
     remove(solution_fn);
 
     ctx.programs_completed = &args->ret_programs_completed;
@@ -917,6 +916,7 @@ void* solve_thread(void* ptr)
                 ctx.solution_inst_count, ctx.input_names, ctx.input_count);
 
         fclose(solution_file);
+        exit(EXIT_SUCCESS);
     }
 
     // Free the root state
@@ -1052,6 +1052,7 @@ void solve(const char* solver_file, const char* output_dir, int threads,
                 }
 
                 pthread_join(info[i].thread, NULL);
+                free(info[i].args.output_dir);
                 info[i].started = false;
                 info[i].args.ret_done = false;
                 completed_by_old_threads +=
@@ -1086,6 +1087,9 @@ void solve(const char* solver_file, const char* output_dir, int threads,
             info[i].args.assembly = assembly;
             info[i].args.output_generated = false;
             info[i].args.ret_done = false;
+
+            info[i].args.output_dir = malloc(255 * sizeof(char));
+            sprintf(info[i].args.output_dir, "%s/%d/", output_dir, assembly);
 
             int res = pthread_create(&info[i].thread, NULL, solve_thread,
                     (void*)&info[i].args);
