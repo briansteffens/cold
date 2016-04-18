@@ -5,3 +5,4 @@ void free_pattern(struct Pattern* pattern);
 struct Instruction* instruction_clone(struct Instruction* orig);
 void fprint_program(FILE* file, struct Instruction** instructions,
     int instruction_count, char** args, int arg_count);
+void solve(const char* solver_file, int assembly_index, bool output_generated);

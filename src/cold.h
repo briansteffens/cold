@@ -2,9 +2,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-void print_trace();
-
 typedef enum { false, true } bool;
+
+void print_trace();
+bool starts_with(const char* haystack, const char* needle);
+int exponent(int value, int power);
 
 enum VarType
 {

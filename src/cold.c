@@ -22,6 +22,23 @@ void print_trace()
     free(strings);
 }
 
+bool starts_with(const char* haystack, const char* needle)
+{
+    return strncmp(haystack, needle, strlen(needle)) == 0;
+}
+
+int exponent(int value, int power)
+{
+    int ret = value;
+
+    for (int i = 1; i < power; i++)
+    {
+        ret *= value;
+    }
+
+    return ret;
+}
+
 char* var_type_tostring(enum VarType input)
 {
     switch (input)

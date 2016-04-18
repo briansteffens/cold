@@ -8,11 +8,6 @@
 #include "solver.h"
 #include "generator.h"
 
-bool starts_with(const char* haystack, const char* needle)
-{
-    return strncmp(haystack, needle, strlen(needle)) == 0;
-}
-
 int usage()
 {
     printf("Usage: bin/cold solve solvers/emc2.solve\n");
@@ -20,58 +15,11 @@ int usage()
     return 0;
 }
 
-int exponent(int value, int power)
-{
-    int ret = value;
-
-    for (int i = 1; i < power; i++)
-    {
-        ret *= value;
-    }
-
-    return ret;
-}
-
-void permute(int result[], int max_depth, int patterns, int target)
-{
-    int total_permutations = exponent(patterns, max_depth);
-
-    int inverse_depth = 0;
-    for (int d = max_depth - 1; d >= 0; d--)
-    {
-        int repeat = 1;
-        if (inverse_depth > 0)
-        {
-            repeat = exponent(patterns, inverse_depth);
-        }
-
-        int permutation = 0;
-        while (permutation < total_permutations)
-        {
-            for (int p = 0; p < patterns; p++)
-            {
-                for (int r = 0; r < repeat; r++)
-                {
-                    if (permutation == target)
-                    {
-                        result[d] = p;
-                        goto level_done;
-                    }
-
-                    permutation++;
-                }
-            }
-        }
-
-        level_done:
-        inverse_depth++;
-    }
-}
-
 void handle_solver(int argc, char* argv[])
 {
     char* solver_file = NULL;
-    int specify_assembly_index = -1;
+    int assembly_index = -1;
+    bool output_generated = false;
 
     struct Context ctx;
 
@@ -79,12 +27,11 @@ void handle_solver(int argc, char* argv[])
     {
         if (starts_with(argv[i], "--assembly="))
         {
-            specify_assembly_index = atoi(argv[i] + 11);
+            assembly_index = atoi(argv[i] + 11);
         }
         else if (strcmp(argv[i], "--output-all") == 0)
         {
-            // Output all generated programs to this file
-            ctx.generated_programs_filename = "output/generated_programs";
+            output_generated = true;
         }
         else
         {
@@ -95,279 +42,10 @@ void handle_solver(int argc, char* argv[])
     if (solver_file == NULL)
     {
         usage();
-    }
-
-    const char* SOLUTION_FILE = "output/solution.cold";
-    remove(SOLUTION_FILE);
-
-    ctx.programs_completed = 0;
-
-    // If outputing generated programs, delete the last output first
-    if (ctx.generated_programs_filename)
-    {
-        remove(ctx.generated_programs_filename);
-    }
-
-    // Default float precision
-    value_set_float(&ctx.precision, 0.0f);
-
-    // Default pattern depth
-    ctx.depth = 3;
-
-    ctx.pattern_count = 0;
-    ctx.patterns = malloc(0);
-
-    ctx.constant_count = 0;
-    ctx.constants = malloc(0);
-
-    ctx.input_count = 0;
-    ctx.input_names = malloc(0);
-
-    ctx.case_count = 0;
-    ctx.cases = malloc(0);
-
-    ctx.solution_inst = NULL;
-    ctx.solution_inst_count = 0;
-
-    // Read solve file
-    FILE* file = fopen(solver_file, "r");
-
-    if (file == 0)
-    {
-        printf("Failed to open source file [%s]\n", solver_file);
         return;
     }
 
-    int line_count;
-    char** lines = read_lines(file, &line_count);
-
-    fclose(file);
-
-    // Parse solve file
-    for (int i = 0; i < line_count; i++)
-    {
-        char* raw = NULL;
-
-        // Strip out comments
-        char* comment_start = strchr(lines[i], '#');
-        if (comment_start != NULL)
-        {
-            raw = strndup(lines[i], comment_start - lines[i]);
-        }
-        else
-        {
-            raw = strdup(lines[i]);
-        }
-
-        free(lines[i]);
-        char* line = trim(raw);
-        free(raw);
-
-        if (starts_with(line, "precision "))
-        {
-            free(ctx.precision.data);
-            value_set_from_string(&ctx.precision, line + 10);
-        }
-        else if (starts_with(line, "depth "))
-        {
-            ctx.depth = atoi(line + 6);
-        }
-        else if (starts_with(line, "pattern "))
-        {
-            char fn[80];
-
-            strcpy(fn, "patterns/");
-            strcat(fn, line + 8);
-            strcat(fn, ".pattern");
-
-            add_pattern(&ctx, fn);
-        }
-        else if (starts_with(line, "constant "))
-        {
-            ctx.constant_count++;
-            ctx.constants = realloc(ctx.constants,
-                    ctx.constant_count * sizeof(struct Value));
-
-            value_set_from_string(&ctx.constants[ctx.constant_count - 1],
-                    line + 9);
-        }
-        else if (starts_with(line, "input "))
-        {
-            ctx.input_count++;
-            ctx.input_names = realloc(ctx.input_names,
-                    ctx.input_count * sizeof(char*));
-
-            ctx.input_names[ctx.input_count - 1] = strdup(line + 6);
-        }
-        else if (starts_with(line, "case "))
-        {
-            // Allocate a new case
-            ctx.case_count++;
-            ctx.cases = realloc(ctx.cases,
-                    ctx.case_count * sizeof(struct Case));
-
-            struct Case* new_case = &ctx.cases[ctx.case_count - 1];
-
-            new_case->input_values = malloc(
-                    ctx.input_count * sizeof(struct Value));
-
-            // Split parameters
-            int part_count = 0;
-            char** parts = split(line + 5, ' ', &part_count);
-
-            if (part_count - 1 != ctx.input_count)
-            {
-                printf("ERROR: case parameter count must match input count\n");
-                exit(0);
-            }
-
-            // Set inputs
-            for (int i = 0; i < part_count - 1; i++)
-            {
-                value_set_from_string(&new_case->input_values[i], parts[i]);
-            }
-
-            // Set expected output
-            value_set_from_string(&new_case->expected, parts[part_count - 1]);
-
-            // Free string split values
-            for (int i = 0; i < part_count; i++)
-                free(parts[i]);
-
-            free(parts);
-        }
-        else if (strcmp(line, "") == 0)
-        {
-            // Blank line, ignore
-        }
-        else
-        {
-            printf("ERROR: Unrecognized solve file line [%s]\n", lines[i]);
-        }
-
-        free(line);
-    }
-
-    free(lines);
-
-    // Setup pattern mask
-    ctx.pattern_mask = malloc(ctx.depth * sizeof(bool*));
-
-    for (int i = 0; i < ctx.depth; i++)
-    {
-        ctx.pattern_mask[i] = malloc(ctx.pattern_count * sizeof(bool));
-
-        for (int j = 0; j < ctx.pattern_count; j++)
-        {
-            ctx.pattern_mask[i][j] = true;
-        }
-    }
-
-    // Restrict pattern mask to specified assembly
-    if (specify_assembly_index >= 0)
-    {
-        int assembly_patterns[ctx.depth];
-
-        permute(assembly_patterns, ctx.depth, ctx.pattern_count,
-                specify_assembly_index);
-
-        for (int d = 0; d < ctx.depth; d++)
-        {
-            for (int p = 0; p < ctx.pattern_count; p++)
-            {
-                ctx.pattern_mask[d][p] = assembly_patterns[d] == p;
-            }
-        }
-    }
-
-    // Setup root state
-    struct State** root = malloc(1 * sizeof(struct State*));
-
-    root[0] = setup_state(&ctx, 0);
-
-    root[0]->instruction_count = 1;
-    root[0]->instructions = malloc(
-        root[0]->instruction_count * sizeof(struct Instruction*));
-    root[0]->instructions_owned = malloc(
-        root[0]->instruction_count * sizeof(bool));
-
-    // One "NEXT" instruction - a placeholder for code patterns
-    root[0]->instructions[0] = malloc(sizeof(struct Instruction));
-    root[0]->instructions[0]->type = INST_NEXT;
-    root[0]->instructions[0]->pattern_depth = -1;
-    root[0]->instructions_owned[0] = true;
-    params_allocate(root[0]->instructions[0], 0);
-
-    root[0]->inst_ptr = 0;
-
-    // gogogo
-    step(&ctx, root, 1);
-
-    // Write solution to solution file
-    if (ctx.solution_inst != NULL)
-    {
-        FILE* solution_file = fopen(SOLUTION_FILE, "a");
-
-        if (solution_file == 0)
-        {
-            printf("Failed to open solution file [%s]\n", SOLUTION_FILE);
-            return;
-        }
-
-        fprint_program(solution_file, ctx.solution_inst,
-                ctx.solution_inst_count, ctx.input_names, ctx.input_count);
-
-        fclose(solution_file);
-    }
-
-    print_status(&ctx, true);
-    printf("\n");
-
-    // Free the root state
-    free_state(root[0]);
-    free(root);
-
-    // Free the context
-    free(ctx.precision.data);
-
-    for (int i = 0; i < ctx.solution_inst_count; i++)
-    {
-        instruction_free(ctx.solution_inst[i]);
-        free(ctx.solution_inst[i]);
-    }
-
-    free(ctx.solution_inst);
-
-    for (int i = 0; i < ctx.constant_count; i++)
-    {
-        free(ctx.constants[i].data);
-    }
-    free(ctx.constants);
-
-    for (int i = 0; i < ctx.input_count; i++)
-        free(ctx.input_names[i]);
-    free(ctx.input_names);
-
-    for (int i = 0; i < ctx.case_count; i++)
-    {
-        free(ctx.cases[i].expected.data);
-
-        for (int j = 0; j < ctx.input_count; j++)
-        {
-            free(ctx.cases[i].input_values[j].data);
-        }
-
-        free(ctx.cases[i].input_values);
-    }
-    free(ctx.cases);
-
-    for (int i = 0; i < ctx.pattern_count; i++)
-        free_pattern(ctx.patterns[i]);
-    free(ctx.patterns);
-
-    for (int i = 0; i < ctx.depth; i++)
-        free(ctx.pattern_mask[i]);
-    free(ctx.pattern_mask);
+    solve(solver_file, assembly_index, output_generated);
 }
 
 void handle_run(const char* filename, char** inputs, int inputs_count)
