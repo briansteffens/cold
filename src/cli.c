@@ -23,6 +23,7 @@ void handle_solver(int argc, char* argv[])
     bool output_generated = false;
     int threads = 1;
     bool interactive = true;
+    char* output_dir = "output/";
 
     struct Context ctx;
 
@@ -48,6 +49,10 @@ void handle_solver(int argc, char* argv[])
         {
             interactive = false;
         }
+        else if (starts_with(argv[i], "--output-dir="))
+        {
+            output_dir = argv[i] + 13;
+        }
         else
         {
             solver_file = argv[i];
@@ -60,7 +65,8 @@ void handle_solver(int argc, char* argv[])
         return;
     }
 
-    solve(solver_file, threads, assembly_index, assembly_count, interactive);
+    solve(solver_file, output_dir, threads, assembly_index, assembly_count,
+            interactive);
 }
 
 void handle_run(const char* filename, char** inputs, int inputs_count)

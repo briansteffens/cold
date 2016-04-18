@@ -14,6 +14,7 @@ struct SolveThreadArgs
 {
     // Input args (write by solve, read by solve_thread)
     const char* solver_file;
+    const char* output_dir;
     int assembly;
     bool output_generated;
 
@@ -830,8 +831,16 @@ void* solve_thread(void* ptr)
         remove(ctx.generated_programs_filename);
     }
 
-    const char* SOLUTION_FILE = "output/solution.cold";
-    remove(SOLUTION_FILE);
+    // Build the solution file output path
+    char solution_fn[255];
+    strcpy(solution_fn, args->output_dir);
+    if (solution_fn[strlen(solution_fn) - 1] != '/')
+    {
+        strcat(solution_fn, "/");
+    }
+    strcat(solution_fn, "solution.cold");
+
+    remove(solution_fn);
 
     ctx.programs_completed = &args->ret_programs_completed;
 
@@ -896,11 +905,11 @@ void* solve_thread(void* ptr)
     // Write solution to solution file
     if (ctx.solution_inst != NULL)
     {
-        FILE* solution_file = fopen(SOLUTION_FILE, "a");
+        FILE* solution_file = fopen(solution_fn, "a");
 
         if (solution_file == 0)
         {
-            printf("Failed to open solution file [%s]\n", SOLUTION_FILE);
+            printf("Failed to open solution file [%s]\n", solution_fn);
             return NULL;
         }
 
@@ -1004,8 +1013,8 @@ void print_total_status(struct SolveThreadInfo info[], int threads,
     fflush(stdout);
 }
 
-void solve(const char* solver_file, int threads, int assembly_start,
-        int assembly_count, bool interactive)
+void solve(const char* solver_file, const char* output_dir, int threads,
+        int assembly_start, int assembly_count, bool interactive)
 {
     struct SolveThreadInfo info[threads];
     int assembly = assembly_start;
