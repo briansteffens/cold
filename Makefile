@@ -1,30 +1,37 @@
 HEADERS = src/cold.h src/interpreter.h src/solver.h src/compiler.h src/generator.h
 
-default: cli
+CCFLAGS = -c
+CXXFLAGS =
+
+all: cli
+
+debug: CCFLAGS += -g3
+debug: CXXFLAGS += -rdynamic
+debug: cli
 
 pre-build:
 	mkdir -p obj bin
 
 cold.o: src/cold.c $(HEADERS)
-	gcc -c -g3 src/cold.c -o obj/cold.o
+	gcc $(CCFLAGS) src/cold.c -o obj/cold.o
 
 interpreter.o: src/interpreter.c $(HEADERS)
-	gcc -c -g3 src/interpreter.c -o obj/interpreter.o
+	gcc $(CCFLAGS) src/interpreter.c -o obj/interpreter.o
 
 solver.o: src/solver.c $(HEADERS)
-	gcc -c -g3 src/solver.c -o obj/solver.o
+	gcc $(CCFLAGS) src/solver.c -o obj/solver.o
 
 compiler.o: src/compiler.c $(HEADERS)
-	gcc -c -g3 src/compiler.c -o obj/compiler.o
+	gcc $(CCFLAGS) src/compiler.c -o obj/compiler.o
 
 generator.o: src/generator.c $(HEADERS)
-	gcc -c -g3 src/generator.c -o obj/generator.o
+	gcc $(CCFLAGS) src/generator.c -o obj/generator.o
 
 cli.o: src/cli.c $(HEADERS)
-	gcc -c -g3 src/cli.c -o obj/cli.o
+	gcc $(CCFLAGS) src/cli.c -o obj/cli.o
 
 cli: pre-build cold.o interpreter.o solver.o compiler.o generator.o cli.o
-	gcc -rdynamic obj/compiler.o obj/interpreter.o obj/cold.o obj/solver.o obj/generator.o obj/cli.o -lm -o bin/cold
+	gcc $(CXXFLAGS) obj/compiler.o obj/interpreter.o obj/cold.o obj/solver.o obj/generator.o obj/cli.o -lm -o bin/cold
 
 clean:
 	rm -rf obj bin
