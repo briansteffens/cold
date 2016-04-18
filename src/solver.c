@@ -4,10 +4,22 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+#include <pthread.h>
 
 #include "cold.h"
 #include "interpreter.h"
 #include "compiler.h"
+
+struct SolveThreadArgs
+{
+    // Input args (write by solve, read by solve_thread)
+    const char* solver_file;
+    int assembly;
+    bool output_generated;
+
+    // Return values (write by solve_thread, read by solve)
+    bool ret_done;
+};
 
 void print_status(struct Context* ctx, bool always)
 {
@@ -678,13 +690,15 @@ void free_pattern(struct Pattern* pattern)
     free(pattern);
 }
 
-void solve(const char* solver_file, int assembly_index, bool output_generated)
+void* solve_thread(void* ptr)
 {
+    struct SolveThreadArgs* args = (struct SolveThreadArgs*)ptr;
+
     struct Context ctx;
 
     ctx.generated_programs_filename = NULL;
 
-    if (output_generated)
+    if (args->output_generated)
     {
         // Output all generated programs to this file
         ctx.generated_programs_filename = "output/generated_programs";
@@ -718,12 +732,12 @@ void solve(const char* solver_file, int assembly_index, bool output_generated)
     ctx.solution_inst_count = 0;
 
     // Read solve file
-    FILE* file = fopen(solver_file, "r");
+    FILE* file = fopen(args->solver_file, "r");
 
     if (file == 0)
     {
-        printf("Failed to open source file [%s]\n", solver_file);
-        return;
+        printf("Failed to open source file [%s]\n", args->solver_file);
+        return NULL;
     }
 
     int line_count;
@@ -852,12 +866,12 @@ void solve(const char* solver_file, int assembly_index, bool output_generated)
     }
 
     // Restrict pattern mask to specified assembly
-    if (assembly_index >= 0)
+    if (args->assembly >= 0)
     {
         int assembly_patterns[ctx.depth];
 
         permute(assembly_patterns, ctx.depth, ctx.pattern_count,
-                assembly_index);
+                args->assembly);
 
         for (int d = 0; d < ctx.depth; d++)
         {
@@ -899,7 +913,7 @@ void solve(const char* solver_file, int assembly_index, bool output_generated)
         if (solution_file == 0)
         {
             printf("Failed to open solution file [%s]\n", SOLUTION_FILE);
-            return;
+            return NULL;
         }
 
         fprint_program(solution_file, ctx.solution_inst,
@@ -960,4 +974,86 @@ void solve(const char* solver_file, int assembly_index, bool output_generated)
         free(ctx.pattern_mask[i]);
     }
     free(ctx.pattern_mask);
+
+    args->ret_done = true;
+}
+
+struct SolveThreadInfo
+{
+    pthread_t thread;
+    struct SolveThreadArgs args;
+    bool started;
+};
+
+void solve(const char* solver_file, int threads, int assembly_start,
+        int assembly_count)
+{
+    struct SolveThreadInfo info[threads];
+    int assembly = assembly_start;
+
+    for (int i = 0; i < threads; i++)
+    {
+        info[i].started = false;
+    }
+
+    while (true)
+    {
+        for (int i = 0; i < threads; i++)
+        {
+            if (info[i].started)
+            {
+                if (!info[i].args.ret_done)
+                {
+                    continue;
+                }
+
+                pthread_join(info[i].thread, NULL);
+                info[i].started = false;
+            }
+
+            if (assembly + 1 >= assembly_count)
+            {
+                bool any_still_running = false;
+
+                for (int j = 0; j < threads; j++)
+                {
+                    if (info[j].started)
+                    {
+                        any_still_running = true;
+                        break;
+                    }
+                }
+
+                if (!any_still_running)
+                {
+                    goto all_done;
+                }
+
+                continue;
+            }
+
+            assembly++;
+
+            info[i].args.solver_file = solver_file;
+            info[i].args.assembly = assembly;
+            info[i].args.output_generated = false;
+            info[i].args.ret_done = false;
+
+            int res = pthread_create(&info[i].thread, NULL, solve_thread,
+                    (void*)&info[i].args);
+
+            if (res)
+            {
+                printf("Thread creation error: %d\n", res);
+                exit(EXIT_FAILURE);
+            }
+
+            info[i].started = true;
+        }
+
+        sleep(0);
+    }
+
+    all_done:
+    exit(EXIT_SUCCESS);
 }

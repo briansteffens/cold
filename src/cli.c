@@ -20,6 +20,7 @@ void handle_solver(int argc, char* argv[])
     char* solver_file = NULL;
     int assembly_index = -1;
     bool output_generated = false;
+    int threads = 1;
 
     struct Context ctx;
 
@@ -33,6 +34,10 @@ void handle_solver(int argc, char* argv[])
         {
             output_generated = true;
         }
+        else if (starts_with(argv[i], "--threads="))
+        {
+            threads = atoi(argv[i] + 10);
+        }
         else
         {
             solver_file = argv[i];
@@ -45,7 +50,7 @@ void handle_solver(int argc, char* argv[])
         return;
     }
 
-    solve(solver_file, assembly_index, output_generated);
+    solve(solver_file, threads, assembly_index, 4);
 }
 
 void handle_run(const char* filename, char** inputs, int inputs_count)
