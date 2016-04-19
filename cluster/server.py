@@ -49,15 +49,22 @@ app = Flask(__name__)
 
 @app.route('/')
 def index():
-    global total_run
-    global workers
+    with open('cluster/index.html') as f:
+        return f.read()
+#    global total_run
+#    global workers
+#
+#    total = total_run
+#    for worker_id, worker in workers.items():
+#        for a in worker['assemblies_running']:
+#            total += a['programs_completed']
+#
+#    return str(total)
 
-    total = total_run
-    for worker_id, worker in workers.items():
-        for a in worker['assemblies_running']:
-            total += a['programs_completed']
-
-    return str(total)
+@app.route('/view.js')
+def view():
+    with open('cluster/view.js') as f:
+        return f.read()
 
 @app.route('/worker/status', methods=['POST'])
 def worker_status():
