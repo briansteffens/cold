@@ -150,6 +150,11 @@ struct Context
 
     char* generated_programs_filename;
     int* programs_completed;
+
+    bool print_solutions;
+    bool find_all_solutions;
+
+    char* solution_fn;
 };
 
 struct Function

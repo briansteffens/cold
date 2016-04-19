@@ -18,6 +18,8 @@ struct SolveThreadArgs
     char* output_dir;
     int assembly;
     bool output_generated;
+    bool print_solutions;
+    bool find_all_solutions;
 
     // Return values (write by solve_thread, read by solve)
     bool ret_done;
@@ -602,10 +604,41 @@ void step_vary(struct Context* ctx, struct State* state)
         if (!ctx->solution_inst)
             continue;
 
-        // Found a solution to all cases.
-        printf("\n");
-        print_program(ctx->solution_inst, ctx->solution_inst_count, true);
-        break;
+        // Write solution to solution file
+        if (ctx->solution_inst != NULL)
+        {
+            FILE* solution_file = fopen(ctx->solution_fn, "a");
+
+            if (solution_file == 0)
+            {
+                printf("Failed to open solution file [%s]\n",
+                        ctx->solution_fn);
+                exit(EXIT_FAILURE);
+            }
+
+            fprint_program(solution_file, ctx->solution_inst,
+                    ctx->solution_inst_count, ctx->input_names,
+                    ctx->input_count);
+
+            fclose(solution_file);
+        }
+
+        // Output solution to the console
+        if (ctx->print_solutions)
+        {
+            printf("\n");
+            print_program(ctx->solution_inst, ctx->solution_inst_count, true);
+        }
+
+        if (!ctx->find_all_solutions)
+        {
+            break;
+        }
+
+        // Clear solution and keep looking for more
+        free(ctx->solution_inst);
+        ctx->solution_inst = NULL;
+        ctx->solution_inst_count = 0;
     }
 
     // If no solution has been found yet, continue recursion
@@ -638,8 +671,10 @@ void step(struct Context* ctx, struct State** states, int state_count)
                 step_vary(ctx, patterned[j]);
 
                 // End execution if a solution was found
-                if (ctx->solution_inst)
+                if (!ctx->find_all_solutions && ctx->solution_inst)
+                {
                     break;
+                }
             }
 
             // Free pattern forked states
@@ -659,8 +694,10 @@ void step(struct Context* ctx, struct State** states, int state_count)
         }
 
         // End execution if a solution was found
-        if (ctx->solution_inst)
+        if (!ctx->find_all_solutions && ctx->solution_inst)
+        {
             break;
+        }
     }
 }
 
@@ -823,6 +860,9 @@ void* solve_thread(void* ptr)
 
     struct Context ctx;
 
+    ctx.print_solutions = args->print_solutions;
+    ctx.find_all_solutions = args->find_all_solutions;
+
     ctx.generated_programs_filename = NULL;
 
     if (args->output_generated)
@@ -840,6 +880,8 @@ void* solve_thread(void* ptr)
     strcpy(solution_fn, args->output_dir);
     strcat(solution_fn, "solution.cold");
     remove(solution_fn);
+
+    ctx.solution_fn = solution_fn;
 
     ctx.programs_completed = &args->ret_programs_completed;
 
@@ -900,24 +942,6 @@ void* solve_thread(void* ptr)
 
     // gogogo
     step(&ctx, root, 1);
-
-    // Write solution to solution file
-    if (ctx.solution_inst != NULL)
-    {
-        FILE* solution_file = fopen(solution_fn, "a");
-
-        if (solution_file == 0)
-        {
-            printf("Failed to open solution file [%s]\n", solution_fn);
-            return NULL;
-        }
-
-        fprint_program(solution_file, ctx.solution_inst,
-                ctx.solution_inst_count, ctx.input_names, ctx.input_count);
-
-        fclose(solution_file);
-        exit(EXIT_SUCCESS);
-    }
 
     // Free the root state
     free_state(root[0]);
@@ -1014,10 +1038,10 @@ void print_total_status(struct SolveThreadInfo info[], int threads,
 }
 
 void solve(const char* solver_file, const char* output_dir, int threads,
-        int assembly_start, int assembly_count, bool interactive)
+        int assembly_start, int assembly_count, bool interactive,
+        bool print_solutions, bool find_all_solutions)
 {
     struct SolveThreadInfo info[threads];
-    int assembly = assembly_start;
 
     for (int i = 0; i < threads; i++)
     {
@@ -1027,7 +1051,7 @@ void solve(const char* solver_file, const char* output_dir, int threads,
     }
 
     // All assemblies
-    if (assembly_start == -1 && assembly_count == -1)
+    if (assembly_start == -1)
     {
         struct Context ctx;
         parse_solver_file(&ctx, solver_file);
@@ -1035,6 +1059,10 @@ void solve(const char* solver_file, const char* output_dir, int threads,
         assembly_start = 0;
         assembly_count = exponent(ctx.pattern_count, ctx.depth);
     }
+
+    int assembly = assembly_start;
+
+    mkdir(output_dir, 0777);
 
     int completed_by_old_threads = 0;
     static time_t last = 0;
@@ -1060,7 +1088,7 @@ void solve(const char* solver_file, const char* output_dir, int threads,
                 info[i].args.ret_programs_completed = 0;
             }
 
-            if (assembly + 1 >= assembly_count)
+            if (assembly >= assembly_start + assembly_count)
             {
                 bool any_still_running = false;
 
@@ -1081,15 +1109,17 @@ void solve(const char* solver_file, const char* output_dir, int threads,
                 continue;
             }
 
-            assembly++;
-
             info[i].args.solver_file = solver_file;
             info[i].args.assembly = assembly;
             info[i].args.output_generated = false;
             info[i].args.ret_done = false;
+            info[i].args.print_solutions = print_solutions;
+            info[i].args.find_all_solutions = find_all_solutions;
 
             info[i].args.output_dir = malloc(255 * sizeof(char));
             sprintf(info[i].args.output_dir, "%s/%d/", output_dir, assembly);
+
+            assembly++;
 
             int res = pthread_create(&info[i].thread, NULL, solve_thread,
                     (void*)&info[i].args);

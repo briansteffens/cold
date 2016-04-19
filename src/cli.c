@@ -19,11 +19,13 @@ void handle_solver(int argc, char* argv[])
 {
     char* solver_file = NULL;
     int assembly_index = -1;
-    int assembly_count = -1;
+    int assembly_count = 1;
     bool output_generated = false;
     int threads = 1;
     bool interactive = true;
     char* output_dir = "output/";
+    bool print_solutions = true;
+    bool find_all_solutions = false;
 
     struct Context ctx;
 
@@ -53,6 +55,14 @@ void handle_solver(int argc, char* argv[])
         {
             output_dir = argv[i] + 13;
         }
+        else if (strcmp(argv[i], "--hide-solutions") == 0)
+        {
+            print_solutions = false;
+        }
+        else if (strcmp(argv[i], "--all") == 0)
+        {
+            find_all_solutions = true;
+        }
         else
         {
             solver_file = argv[i];
@@ -66,7 +76,7 @@ void handle_solver(int argc, char* argv[])
     }
 
     solve(solver_file, output_dir, threads, assembly_index, assembly_count,
-            interactive);
+            interactive, print_solutions, find_all_solutions);
 }
 
 void handle_run(const char* filename, char** inputs, int inputs_count)
