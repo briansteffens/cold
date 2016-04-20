@@ -10,7 +10,7 @@ from flask import Flask, request, abort, make_response
 
 WORKER_TOKEN = 'secrets!'
 
-status = 'running'
+status = 'stopped'
 workers = []
 solver = None
 total_assemblies = None
@@ -79,6 +79,7 @@ def console_update():
     global status
     global workers
     global solutions
+    global assemblies_unsolved
 
     req = request.get_json()
 
@@ -108,6 +109,8 @@ def console_update():
         'programs_run': total_run,
         'workers': [],
         'solutions': solutions,
+        'unsolved': assemblies_unsolved,
+        'solved': [],
     }
 
     for w in workers:
@@ -126,6 +129,11 @@ def console_update():
             'programs_run': w['programs_run'],
             'status': worker_status,
         })
+
+        res['solved'].extend([{
+            'assembly': a['assembly'],
+            'programs_completed': a['programs_completed'],
+        } for a in w['assemblies_completed']])
 
     return json.dumps(res)
 

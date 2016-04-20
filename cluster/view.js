@@ -50,6 +50,7 @@ var View = React.createClass({
     }
 
     let workers = [];
+    let total_run_rate = 0;
 
     for (let worker of this.state.server.workers) {
       workers.push(
@@ -62,7 +63,12 @@ var View = React.createClass({
           <td>{worker.status}</td>
         </tr>
       );
+
+      total_run_rate += worker.run_rate;
     }
+
+    total_run_rate = Math.ceil(
+        total_run_rate / this.state.server.workers.length);
 
     let status = this.state.server.status;
 
@@ -108,33 +114,57 @@ var View = React.createClass({
         solutions.push(<pre key={i}>{this.state.server.solutions[i]}</pre>);
     }
 
+    let solved = [];
+    for (let a of this.state.server.solved) {
+      solved.push(
+        <span key={a.assembly}>
+          {a.assembly} [{a.programs_completed}]&nbsp;
+        </span>
+      );
+    }
+
     return (
-      <div>
-        status: { status } { buttons }
-        <br />
-        total run: { this.state.server.programs_run }
-        <br />
-        <table border="1">
-          <thead>
-            <tr>
-              <th>id</th>
-              <th>cores</th>
-              <th>rate</th>
-              <th>programs run</th>
-              <th>assemblies completed</th>
-              <th>status</th>
-            </tr>
-          </thead>
-          <tbody>
-            { workers }
-          </tbody>
-        </table>
-        <br />
-        <textarea rows={20} cols={80} ref="solver"
-            defaultValue={solverDefault}></textarea>
-        <button onClick={this.reset}>reset</button>
-        <br />
-        { solutions }
+      <div id="container">
+        <div id="input">
+          <textarea ref="solver" defaultValue={solverDefault}></textarea>
+          <button onClick={this.reset}>set solver</button>
+        </div>
+        <div id="cluster">
+          status: { status } { buttons }
+          <br />
+          programs run: { this.state.server.programs_run }
+          <br />
+          assemblies run: { this.state.server.solved.length }
+          <br />
+          rate: { total_run_rate }/sec
+          <br />
+          <table border="1">
+            <thead>
+              <tr>
+                <th>id</th>
+                <th>cores</th>
+                <th>rate</th>
+                <th>programs run</th>
+                <th>assemblies completed</th>
+                <th>status</th>
+              </tr>
+            </thead>
+            <tbody>
+              { workers }
+            </tbody>
+          </table>
+          unsolved assemblies:
+          <div>
+            {this.state.server.unsolved.join(' ')}
+          </div>
+          solved assemblies:
+          <div>
+            {solved}
+          </div>
+        </div>
+        <div id="solutions">
+          { solutions }
+        </div>
       </div>
     );
   },
