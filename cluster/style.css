@@ -1,0 +1,13 @@
+body {
+    font-family: monospace;
+}
+
+table {
+    border-collapse: collapse;
+}
+
+table, th, td {
+    border: solid 1px #aaa;
+    padding: 3px 7px;
+    text-align: center;
+}

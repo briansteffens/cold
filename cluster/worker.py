@@ -14,10 +14,11 @@ import json
 SERVER_URL = 'http://localhost:5000/'
 TOKEN = 'secrets!'
 WORKER_ID = sys.argv[1]
-CORES = 4
+CORES = 6
 WORKING_DIR = 'workers/' + WORKER_ID + '/'
 SOLVER_FILE = WORKING_DIR + 'solver.solve'
 
+first_status = True
 assembly_queue = []
 
 def mkdir_p(path):
@@ -73,10 +74,6 @@ while True:
         'assemblies_queued': assembly_queue,
         'assemblies_completed': [],
         'solutions': [],
-        'assemblies_running': [{
-            'assembly': p['assembly'],
-            'programs_completed': p['programs_completed'],
-        } for p in processes],
     }
 
     # Check running processes
@@ -107,6 +104,16 @@ while True:
 
     processes = [p for p in processes if p not in to_remove]
 
+    # Set assemblies running state
+    data['assemblies_running'] = [{
+        'assembly': p['assembly'],
+        'programs_completed': p['programs_completed'],
+    } for p in processes]
+
+    if first_status:
+        data['first_status'] = True
+        first_status = False
+
     # Send status update to server
     try:
         r = requests.post(SERVER_URL + 'worker/status',
@@ -126,8 +133,8 @@ while True:
 
     print(res)
 
-    # Kill all processes if the server is stopped
-    if res['status'] == 'stopped':
+    # Kill all processes if the server is not running
+    if res['status'] != 'running':
         kill_all()
 
     # Write new solver file if the server sent one
@@ -146,4 +153,4 @@ while True:
         n = assembly_queue.pop(0)
         launch_process(n)
 
-    sleep(1)
+    sleep(30 if res['status'] == 'paused' else 1)
