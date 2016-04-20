@@ -607,6 +607,7 @@ void step_vary(struct Context* ctx, struct State* state)
         // Write solution to solution file
         if (ctx->solution_inst != NULL)
         {
+            printf("OUTPUT TO %s\n", ctx->solution_fn);
             FILE* solution_file = fopen(ctx->solution_fn, "a");
 
             if (solution_file == 0)
@@ -619,6 +620,8 @@ void step_vary(struct Context* ctx, struct State* state)
             fprint_program(solution_file, ctx->solution_inst,
                     ctx->solution_inst_count, ctx->input_names,
                     ctx->input_count);
+
+            fprintf(solution_file, "---\n");
 
             fclose(solution_file);
         }

@@ -17,6 +17,7 @@ total_assemblies = None
 assemblies_unsolved = None
 next_unsolved_index = 0
 total_run = 0
+solutions = []
 
 def set_solver(text):
     global solver
@@ -24,6 +25,7 @@ def set_solver(text):
     global assemblies_unsolved
     global next_unsolved_index
     global total_run
+    global solutions
 
     solver = text
 
@@ -46,6 +48,7 @@ def set_solver(text):
     assemblies_unsolved = [a for a in range(total_assemblies)]
     next_unsolved_index = 0
     total_run = 0
+    solutions = []
 
 with open('solvers/gravity.solve') as f:
     set_solver(f.read())
@@ -75,6 +78,7 @@ def style():
 def console_update():
     global status
     global workers
+    global solutions
 
     req = request.get_json()
 
@@ -103,6 +107,7 @@ def console_update():
         'status': status,
         'programs_run': total_run,
         'workers': [],
+        'solutions': solutions,
     }
 
     for w in workers:
@@ -130,6 +135,7 @@ def worker_status():
     global next_unsolved_index
     global total_run
     global status
+    global solutions
 
     req = request.get_json()
 
@@ -156,22 +162,29 @@ def worker_status():
     worker['assemblies_running'] = req['assemblies_running']
     worker['assemblies_queued'] = req['assemblies_queued']
 
-    # Remove assemblies from the unsolved list if they've been completed
-    if 'assemblies_completed' in req:
-        for ac_new in req['assemblies_completed']:
-            found = False
+    if status == 'running':
+        # Remove assemblies from the unsolved list if they've been completed
+        if 'assemblies_completed' in req:
+            for ac_new in req['assemblies_completed']:
+                found = False
 
-            for ac_old in worker['assemblies_completed']:
-                if ac_old['assembly'] == ac_new['assembly']:
-                    found = True
-                    break
+                for ac_old in worker['assemblies_completed']:
+                    if ac_old['assembly'] == ac_new['assembly']:
+                        found = True
+                        break
 
-            if not found:
-                worker['assemblies_completed'].append(ac_new)
-                total_run += ac_new['programs_completed']
+                if not found:
+                    worker['assemblies_completed'].append(ac_new)
+                    total_run += ac_new['programs_completed']
+                    solutions.extend(ac_new['solutions'])
 
-        ac = [a['assembly'] for a in req['assemblies_completed']]
-        assemblies_unsolved = [a for a in assemblies_unsolved if a not in ac]
+            ac = [a['assembly'] for a in req['assemblies_completed']]
+            assemblies_unsolved = [a for a in assemblies_unsolved
+                                   if a not in ac]
+
+    # End execution
+    if assemblies_unsolved is None or len(assemblies_unsolved) == 0:
+        status = 'stopped'
 
     # Calculate run sample
     worker['programs_run'] = sum(a['programs_completed']

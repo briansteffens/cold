@@ -6,6 +6,7 @@ import errno
 import subprocess
 import shutil
 import fcntl
+import glob
 from time import sleep
 
 import requests
@@ -14,7 +15,7 @@ import json
 SERVER_URL = 'http://localhost:5000/'
 TOKEN = 'secrets!'
 WORKER_ID = sys.argv[1]
-CORES = 6
+CORES = 2
 WORKING_DIR = 'workers/' + WORKER_ID + '/'
 SOLVER_FILE = WORKING_DIR + 'solver.solve'
 
@@ -92,13 +93,28 @@ while True:
                 p['programs_completed'] = \
                         int(line.split(':')[1].split(',')[0].strip())
 
+        # Check if the process is still running
         if p['process'].poll() == None:
             continue
 
-        data['assemblies_completed'].append({
+        # Process is finished, clean up
+        ac = {
             'assembly': p['assembly'],
             'programs_completed': p['programs_completed'],
-        })
+            'solutions': [],
+        }
+
+        # Check for solutions
+        print('{}{}/solution.cold'.format(WORKING_DIR, str(p['assembly'])))
+        solution_files = glob.glob('{}{}/solution.cold'.format(WORKING_DIR,
+                str(p['assembly'])))
+        print(solution_files)
+        for solution_fn in solution_files:
+            with open(solution_fn) as f:
+                ac['solutions'].extend([
+                        s.strip() for s in f.read().split('---') if s.strip()])
+
+        data['assemblies_completed'].append(ac)
 
         to_remove.append(p)
 
