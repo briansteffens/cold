@@ -38,6 +38,12 @@ var View = React.createClass({
   unpause: function() {
     this.sendToServer({'command': 'unpause'});
   },
+  reset: function() {
+    this.sendToServer({
+      'command': 'reset',
+      'solver': this.refs.solver.value,
+    });
+  },
   render: function() {
     if (this.state.server === null) {
       return (<div>connecting..</div>);
@@ -118,6 +124,7 @@ var View = React.createClass({
         <br />
         <textarea rows={20} cols={80} ref="solver"
             defaultValue={solverDefault}></textarea>
+        <button onClick={this.reset}>reset</button>
       </div>
     );
   },

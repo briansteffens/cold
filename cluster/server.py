@@ -10,43 +10,45 @@ from flask import Flask, request, abort, make_response
 
 WORKER_TOKEN = 'secrets!'
 
+status = 'running'
 workers = []
 solver = None
+total_assemblies = None
+assemblies_unsolved = None
+next_unsolved_index = 0
+total_run = 0
 
-with open('solvers/gravity.solve') as f:
-    solver = f.read()
+def set_solver(text):
+    global solver
+    global total_assemblies
+    global assemblies_unsolved
+    global next_unsolved_index
+    global total_run
 
-def parse_solver(solver):
-    """Parse a solver file contents into a dict
+    solver = text
 
-    This is incomplete, currently only loading patterns and depth. As
-    additional information is needed from solvers, this will be expanded.
+    lines = text.split('\n')
 
-    """
-    ret = {
-        'patterns': [],
-    }
-
-    lines = solver.split('\n')
+    patterns = []
+    depth = 1
 
     for line in lines:
         line = line.strip()
 
         if line.startswith('pattern '):
-            ret['patterns'].append(line[8:].strip())
+            patterns.append(line[8:].strip())
             continue
 
         if line.startswith('depth '):
-            ret['depth'] = int(line[6:].strip())
+            depth = int(line[6:].strip())
 
-    return ret
+    total_assemblies = len(patterns) ** depth
+    assemblies_unsolved = [a for a in range(total_assemblies)]
+    next_unsolved_index = 0
+    total_run = 0
 
-solver_info = parse_solver(solver)
-total_assemblies = len(solver_info['patterns']) ** solver_info['depth']
-assemblies_unsolved = [a for a in range(total_assemblies)]
-next_unsolved_index = 0
-total_run = 0
-status = 'running'
+with open('solvers/gravity.solve') as f:
+    set_solver(f.read())
 
 app = Flask(__name__)
 
@@ -54,15 +56,6 @@ app = Flask(__name__)
 def index():
     with open('cluster/index.html') as f:
         return f.read()
-#    global total_run
-#    global workers
-#
-#    total = total_run
-#    for worker_id, worker in workers.items():
-#        for a in worker['assemblies_running']:
-#            total += a['programs_completed']
-#
-#    return str(total)
 
 @app.route('/view.js')
 def view():
@@ -81,6 +74,7 @@ def style():
 @app.route('/console_update', methods=['POST'])
 def console_update():
     global status
+    global workers
 
     req = request.get_json()
 
@@ -92,14 +86,18 @@ def console_update():
         elif req['command'] == 'run':
             status = 'running'
 
-            if 'solver' in req:
-                solver = req['solver']
-
         elif req['command'] == 'pause':
             status = 'paused'
 
         elif req['command'] == 'unpause':
             status = 'stopped'
+
+        elif req['command'] == 'reset':
+            if status == 'running':
+                status = 'stopped'
+
+            workers = []
+            set_solver(req['solver'])
 
     res = {
         'status': status,
