@@ -4,6 +4,7 @@ from datetime import datetime
 from random import shuffle
 import json
 import math
+import glob
 import statistics
 
 from flask import Flask, request, abort, make_response
@@ -57,8 +58,18 @@ app = Flask(__name__)
 
 @app.route('/')
 def index():
+    solvers = []
+
+    for solver_fn in glob.glob('solvers/*.solve'):
+        with open(solver_fn) as f:
+            name = solver_fn.replace('solvers/', '').replace('.solve', '')
+            text = f.read().replace('\n', '\\n')
+            solvers.append("{name: '"+name+"',text: '"+text+"'}")
+
     with open('cluster/index.html') as f:
-        return f.read()
+        ret = f.read()
+
+        return ret.replace('{solvers}', ','.join(solvers))
 
 @app.route('/view.js')
 def view():
@@ -148,7 +159,6 @@ def worker_status():
     req = request.get_json()
 
     if req['token'] != WORKER_TOKEN:
-        print(ac)
         abort(403)
 
     worker = next((w for w in workers if w['worker_id'] == req['worker_id']),
@@ -221,8 +231,6 @@ def worker_status():
                 (later['timestamp'] - earlier['timestamp']).total_seconds())
 
         worker['run_rate'] = math.ceil(statistics.mean(run_rates))
-
-    print(assemblies_unsolved)
 
     # Respond to worker
     ret = {

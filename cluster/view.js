@@ -1,7 +1,9 @@
 var View = React.createClass({
   getInitialState: function() {
     return {
-      server: null
+      server: null,
+      solvers: solvers,
+      solver_selection: 0,
     };
   },
   sendToServer: function(data) {
@@ -43,6 +45,22 @@ var View = React.createClass({
       'command': 'reset',
       'solver': this.refs.solver.value,
     });
+  },
+  selectSolver: function() {
+    let solver = null;
+
+    for (let s of this.state.solvers) {
+      if (s.name === this.refs.solverList.value) {
+        solver = s;
+        break;
+      }
+    }
+
+    if (solver === null) {
+      console.log('No solver found');
+    }
+
+    this.refs.solver.value = solver.text;
   },
   render: function() {
     if (this.state.server === null) {
@@ -123,9 +141,19 @@ var View = React.createClass({
       );
     }
 
+    let solverOptions = [];
+    for (let i = 0; i < this.state.solvers.length; i++) {
+      let solver = this.state.solvers[i];
+
+      solverOptions.push(<option key={solver.name}>{solver.name}</option>);
+    }
+
     return (
       <div id="container">
         <div id="input">
+          <select ref="solverList" onChange={this.selectSolver}>
+            { solverOptions }
+          </select>
           <textarea ref="solver" defaultValue={solverDefault}></textarea>
           <button onClick={this.reset}>set solver</button>
         </div>
