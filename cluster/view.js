@@ -100,6 +100,9 @@ var View = React.createClass({
       '# Earth mass, moon mass, distance, newtons\n' +
       'case D5.972E24 D7.34767309E22 D3.8E8 D2.028121E20';
 
+    solverDefault =
+      'depth 1\npattern add\ninput z\ncase i2 i4\ncase i3 i6\n';
+
     let solutions = [];
     for (let i = 0; i < this.state.server.solutions.length; i++) {
         solutions.push(<pre key={i}>{this.state.server.solutions[i]}</pre>);

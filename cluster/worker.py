@@ -31,8 +31,9 @@ def mkdir_p(path):
         else:
             raise
 
-shutil.rmtree('workers')
-mkdir_p(WORKING_DIR)
+def reset_working_dir():
+    shutil.rmtree(WORKING_DIR)
+    mkdir_p(WORKING_DIR)
 
 processes = []
 
@@ -105,10 +106,9 @@ while True:
         }
 
         # Check for solutions
-        print('{}{}/solution.cold'.format(WORKING_DIR, str(p['assembly'])))
         solution_files = glob.glob('{}{}/solution.cold'.format(WORKING_DIR,
                 str(p['assembly'])))
-        print(solution_files)
+
         for solution_fn in solution_files:
             with open(solution_fn) as f:
                 ac['solutions'].extend([
@@ -156,6 +156,8 @@ while True:
     # Write new solver file if the server sent one
     if 'solver' in res:
         kill_all()
+
+        reset_working_dir()
 
         with open(SOLVER_FILE, 'w') as f:
             f.write(res['solver'])
