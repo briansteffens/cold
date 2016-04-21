@@ -1042,7 +1042,7 @@ void print_total_status(struct SolveThreadInfo info[], int threads,
 
 void solve(const char* solver_file, const char* output_dir, int threads,
         int assembly_start, int assembly_count, bool interactive,
-        bool print_solutions, bool find_all_solutions)
+        bool print_solutions, bool find_all_solutions, bool output_generated)
 {
     struct SolveThreadInfo info[threads];
 
@@ -1114,7 +1114,7 @@ void solve(const char* solver_file, const char* output_dir, int threads,
 
             info[i].args.solver_file = solver_file;
             info[i].args.assembly = assembly;
-            info[i].args.output_generated = false;
+            info[i].args.output_generated = output_generated;
             info[i].args.ret_done = false;
             info[i].args.print_solutions = print_solutions;
             info[i].args.find_all_solutions = find_all_solutions;

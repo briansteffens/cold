@@ -76,7 +76,8 @@ void handle_solver(int argc, char* argv[])
     }
 
     solve(solver_file, output_dir, threads, assembly_index, assembly_count,
-            interactive, print_solutions, find_all_solutions);
+            interactive, print_solutions, find_all_solutions,
+            output_generated);
 }
 
 void handle_run(const char* filename, char** inputs, int inputs_count)
