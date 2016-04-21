@@ -8,3 +8,5 @@ void fprint_program(FILE* file, struct Instruction** instructions,
 void solve(const char* solver_file, const char* output_dir, int threads,
         int assembly_start, int assembly_count, bool interactive,
         bool print_solutions, bool find_all_solutions);
+void parse_solver_file(struct Context* ctx, const char* solver_file);
+void permute(int result[], int max_depth, int patterns, int target);

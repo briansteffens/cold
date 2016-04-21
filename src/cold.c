@@ -364,3 +364,13 @@ void free_function(struct Function* func)
 
     free(func->insts);
 }
+
+void free_assembly(struct Assembly* assembly)
+{
+    for (int i = 0; i < assembly->instruction_count; i++)
+    {
+        instruction_free(&assembly->instructions[i]);
+    }
+
+    free(assembly->instructions);
+}

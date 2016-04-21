@@ -169,3 +169,11 @@ struct Function
 };
 
 void free_function(struct Function* func);
+
+struct Assembly
+{
+    struct Instruction* instructions;
+    int instruction_count;
+};
+
+void free_assembly(struct Assembly* assembly);

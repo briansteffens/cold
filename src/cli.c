@@ -200,6 +200,81 @@ void handle_run(const char* filename, char** inputs, int inputs_count)
     free(functions);
 }
 
+int count_combinations(struct Context* ctx)
+{
+    return exponent(ctx->pattern_count, ctx->depth);
+}
+
+struct Combination
+{
+    struct Instruction** instructions;
+    int instruction_count;
+};
+
+void generate_combination(struct Context* ctx, int patterns[],
+        struct Combination* combination)
+{
+    combination->instruction_count = 0;
+    combination->instructions = malloc(0);
+
+    for (int p = 0; p < ctx->depth; p++)
+    {
+        struct Pattern* pattern = ctx->patterns[patterns[p]];
+
+        for (int i = 0; i < pattern->inst_count; i++)
+        {
+            if (pattern->insts[i]->type == INST_NEXT)
+            {
+                continue;
+            }
+
+            combination->instructions = realloc(combination->instructions,
+                    (combination->instruction_count + 1) *
+                    sizeof(struct Instruction*));
+
+            combination->instructions[combination->instruction_count] =
+                    instruction_clone(pattern->insts[i]);
+
+            combination->instruction_count++;
+        }
+    }
+}
+
+void handle_assemblies(int argc, char* argv[])
+{
+    if (argc != 1)
+    {
+        usage();
+        return;
+    }
+
+    struct Context ctx;
+    parse_solver_file(&ctx, argv[0]);
+
+    int combination_count = count_combinations(&ctx);
+    int patterns[ctx.depth];
+
+    char buf[255];
+
+    for (int i = 0; i < combination_count; i++)
+    {
+        permute(patterns, ctx.depth, ctx.pattern_count, i);
+
+        struct Combination combination;
+        generate_combination(&ctx, patterns, &combination);
+
+        printf("assembly %d:\n", i);
+
+        for (int i = 0; i < combination.instruction_count; i++)
+        {
+            instruction_tostring(combination.instructions[i], buf, 255);
+            printf("  %s\n", buf);
+        }
+
+        printf("\n");
+    }
+}
+
 int main(int argc, char* argv[])
 {
     if (argc < 3)
@@ -214,6 +289,10 @@ int main(int argc, char* argv[])
     else if (strcmp(argv[1], "run") == 0)
     {
         handle_run(argv[2], argv + 3, argc - 3);
+    }
+    else if (strcmp(argv[1], "assemblies") == 0)
+    {
+        handle_assemblies(argc - 2, argv + 2);
     }
     else
     {
