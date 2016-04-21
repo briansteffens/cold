@@ -85,9 +85,6 @@ var View = React.createClass({
       total_run_rate += worker.run_rate;
     }
 
-    total_run_rate = Math.ceil(
-        total_run_rate / this.state.server.workers.length);
-
     let status = this.state.server.status;
 
     let buttons = [];
