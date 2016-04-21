@@ -2,14 +2,32 @@
 
 from datetime import datetime
 from random import shuffle
+import sys
 import json
 import math
 import glob
 import statistics
+from functools import wraps
 
-from flask import Flask, request, abort, make_response
+from flask import Flask, request, abort, make_response, Response, session
 
-WORKER_TOKEN = 'secrets!'
+def requires_auth(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        auth = request.authorization
+        if not auth or auth.password != WORKER_TOKEN:
+            return Response(
+                'Could not verify your access level for that URL.\n'
+                'You have to login with proper credentials', 401,
+                {'WWW-Authenticate': 'Basic realm="Login Required"'})
+        return f(*args, **kwargs)
+    return decorated
+
+if len(sys.argv) != 2:
+    print('Usage:')
+    print('cluster/server.py [token]')
+
+WORKER_TOKEN = sys.argv[1]
 
 status = 'stopped'
 workers = []
@@ -57,6 +75,7 @@ with open('solvers/gravity.solve') as f:
 app = Flask(__name__)
 
 @app.route('/')
+@requires_auth
 def index():
     solvers = []
 
@@ -72,11 +91,13 @@ def index():
         return ret.replace('{solvers}', ','.join(solvers))
 
 @app.route('/view.js')
+@requires_auth
 def view():
     with open('cluster/view.js') as f:
         return f.read()
 
 @app.route('/style.css')
+@requires_auth
 def style():
     with open('cluster/style.css') as f:
         res = make_response(f.read(), 200)
@@ -86,6 +107,7 @@ def style():
     return res
 
 @app.route('/console_update', methods=['POST'])
+@requires_auth
 def console_update():
     global status
     global workers
