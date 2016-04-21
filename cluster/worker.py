@@ -12,10 +12,16 @@ from time import sleep
 import requests
 import json
 
-SERVER_URL = 'http://localhost:5000/'
-TOKEN = 'secrets!'
-WORKER_ID = sys.argv[1]
-CORES = 2
+if len(sys.argv) != 5:
+    print('Usage:')
+    print('cluster/worker.py [cluster_server_url] [token] [worker_id] [cores]')
+    sys.exit(0)
+
+SERVER_URL = sys.argv[1]
+TOKEN = sys.argv[2]
+WORKER_ID = sys.argv[3]
+CORES = int(sys.argv[4])
+
 WORKING_DIR = 'workers/' + WORKER_ID + '/'
 SOLVER_FILE = WORKING_DIR + 'solver.solve'
 
@@ -32,8 +38,14 @@ def mkdir_p(path):
             raise
 
 def reset_working_dir():
-    shutil.rmtree(WORKING_DIR)
+    global WORKING_DIR
+    try:
+        shutil.rmtree(WORKING_DIR)
+    except:
+        pass
     mkdir_p(WORKING_DIR)
+
+reset_working_dir()
 
 processes = []
 
