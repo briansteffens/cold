@@ -607,7 +607,6 @@ void step_vary(struct Context* ctx, struct State* state)
         // Write solution to solution file
         if (ctx->solution_inst != NULL)
         {
-            printf("OUTPUT TO %s\n", ctx->solution_fn);
             FILE* solution_file = fopen(ctx->solution_fn, "a");
 
             if (solution_file == 0)
@@ -866,17 +865,19 @@ void* solve_thread(void* ptr)
     ctx.print_solutions = args->print_solutions;
     ctx.find_all_solutions = args->find_all_solutions;
 
+    // Create the output directory
+    mkdir(args->output_dir, 0777);
+
     ctx.generated_programs_filename = NULL;
 
     if (args->output_generated)
     {
-        // Output all generated programs to this file
-        ctx.generated_programs_filename = "output/generated_programs";
-        remove(ctx.generated_programs_filename);
+        // Build the generated output file path
+        char output_generated[255];
+        strcpy(output_generated, args->output_dir);
+        strcat(output_generated, "generated");
+        ctx.generated_programs_filename = output_generated;
     }
-
-    // Create the output directory
-    mkdir(args->output_dir, 0777);
 
     // Build the solution file output path
     char solution_fn[255];
@@ -1066,6 +1067,11 @@ void solve(const char* solver_file, const char* output_dir, int threads,
     int assembly = assembly_start;
 
     mkdir(output_dir, 0777);
+
+    if (output_generated)
+    {
+        remove("output/generated_programs");
+    }
 
     int completed_by_old_threads = 0;
     static time_t last = 0;
