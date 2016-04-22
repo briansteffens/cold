@@ -2,7 +2,7 @@
 
 depth 4
 
-precision D1E2
+precision D1.35E15
 
 constant D6.67408E-11 # Gravitational constant
 constant D2E0
@@ -15,5 +15,8 @@ input m1
 input m2
 input d
 
-# (Earth mass) (Moon mass)    (Distance) (Newtons)
+# Earth mass, moon mass, distance, newtons
 case D5.972E24 D7.34767309E22 D3.8E8 D2.028121E20
+
+# Saturn mass, sun mass, distance, newtons
+case D5.683E26 D1.989E30 D1.433E12 D3.673766E22

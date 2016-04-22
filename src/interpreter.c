@@ -99,7 +99,7 @@ bool compare(struct Context* ctx, struct Value* left, struct Value* right)
         long double f_left = *((long double*)left->data);
         long double f_right = *((long double*)right->data);
         long double f_precision = *((long double*)ctx->precision.data);
-        return f_left >= f_right-f_precision && f_left <= f_right+f_precision;
+        return fabsl(f_left - f_right) <= f_precision;
     }
     else
     {
