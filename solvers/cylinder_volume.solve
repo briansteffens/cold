@@ -1,0 +1,18 @@
+# pi * r^2 * height
+
+depth 3
+
+precision f0.1
+
+constant f3.14159
+constant f2.0
+
+pattern mul
+pattern exp
+
+input r
+input h
+
+case f1.0 f3.0 f9.43
+case f2.0 f1.5 f18.85
+case f4.0 f7.5 f376.9908
