@@ -24,6 +24,7 @@ struct SolveThreadArgs
     // Return values (write by solve_thread, read by solve)
     bool ret_done;
     int ret_programs_completed;
+    bool ret_solved;
 };
 
 // Load a pattern file into a context
@@ -645,11 +646,15 @@ void step_vary(struct Context* ctx, struct State* state)
 
     // If no solution has been found yet, continue recursion
     if (!ctx->solution_inst)
+    {
         step(ctx, varied, varied_count);
+    }
 
     // Free forked states
     for (int j = 0; j < varied_count; j++)
+    {
         free_state(varied[j]);
+    }
 
     free(varied);
 }
@@ -947,6 +952,8 @@ void* solve_thread(void* ptr)
     // gogogo
     step(&ctx, root, 1);
 
+    args->ret_solved = (ctx.solution_inst != NULL);
+
     // Free the root state
     free_state(root[0]);
     free(root);
@@ -1095,6 +1102,10 @@ void solve(const char* solver_file, const char* output_dir, int threads,
                 completed_by_old_threads +=
                     info[i].args.ret_programs_completed;
                 info[i].args.ret_programs_completed = 0;
+                if (info[i].args.ret_solved && !find_all_solutions)
+                {
+                    goto all_done;
+                }
             }
 
             if (assembly >= assembly_start + assembly_count)
@@ -1122,6 +1133,7 @@ void solve(const char* solver_file, const char* output_dir, int threads,
             info[i].args.assembly = assembly;
             info[i].args.output_generated = output_generated;
             info[i].args.ret_done = false;
+            info[i].args.ret_solved = false;
             info[i].args.print_solutions = print_solutions;
             info[i].args.find_all_solutions = find_all_solutions;
 
