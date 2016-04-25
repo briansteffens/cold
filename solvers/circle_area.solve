@@ -1,0 +1,18 @@
+# Area of a circle
+# A = pi * r^2
+
+depth 2
+
+precision f0.1
+
+constant f3.14159
+constant f2.0
+
+pattern mul
+pattern exp
+
+input r
+
+case f2.5 f19.635
+case f4000.0 f50265440.0
+case f0.3 f0.283
