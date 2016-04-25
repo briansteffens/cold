@@ -1,0 +1,17 @@
+# Circumference of a circle
+# C = 2r * pi
+
+depth 2
+
+precision f1.1
+
+constant f3.14159
+constant f2.0
+
+pattern mul
+
+input r
+
+case f2.5 f15.71
+case f4000.0 f25132.72
+case f0.3 f1.885
