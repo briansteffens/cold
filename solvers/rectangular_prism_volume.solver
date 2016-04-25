@@ -1,0 +1,16 @@
+# Volume for rectangular prism
+# V = l * w * h
+
+depth 2
+
+precision f0.1
+
+pattern mul
+
+input l
+input w
+input h
+
+case f1.0 f1.0 f1.0 f1.0
+case f1.0 f2.0 f3.0 f6.0
+case f20.0 f10.0 f100.0 f20000.0
