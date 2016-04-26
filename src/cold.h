@@ -149,7 +149,7 @@ struct Context
     int constant_count;
 
     char* generated_programs_filename;
-    int* programs_completed;
+    unsigned long* programs_completed;
 
     bool print_solutions;
     bool find_all_solutions;

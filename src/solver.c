@@ -23,7 +23,7 @@ struct SolveThreadArgs
 
     // Return values (write by solve_thread, read by solve)
     bool ret_done;
-    int ret_programs_completed;
+    unsigned long ret_programs_completed;
     bool ret_solved;
 };
 
@@ -1017,7 +1017,7 @@ struct SolveThreadInfo
 void print_total_status(struct SolveThreadInfo info[], int threads,
         int completed_by_old_threads, time_t program_start, bool interactive)
 {
-    int total_completed = completed_by_old_threads;
+    unsigned long total_completed = completed_by_old_threads;
 
     for (int i = 0; i < threads; i++)
     {
@@ -1080,7 +1080,7 @@ void solve(const char* solver_file, const char* output_dir, int threads,
         remove("output/generated_programs");
     }
 
-    int completed_by_old_threads = 0;
+    unsigned long completed_by_old_threads = 0;
     static time_t last = 0;
     time_t program_start = time(NULL);
 
