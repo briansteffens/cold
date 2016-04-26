@@ -132,9 +132,13 @@ void print_program(struct Instruction** inst, int count, bool line_nums)
     {
         instruction_tostring(inst[i], buf, BUF_LEN);
         if (line_nums)
+        {
             printf("%d %s\n", i, buf);
+        }
         else
-            printf("%s\n", i, buf);
+        {
+            printf("%s\n", buf);
+        }
     }
 }
 
@@ -194,6 +198,10 @@ void interpret(struct State* state)
                 value_set_int(new_local->value,
                     *((int*)left->data) / *((int*)right->data));
                 break;
+            default:
+                printf("No handling for this instruction type: %d\n",
+                        inst->type);
+                exit(EXIT_FAILURE);
             }
         }
         else if (left->type == TYPE_FLOAT && right->type == TYPE_FLOAT &&
@@ -217,6 +225,10 @@ void interpret(struct State* state)
                 value_set_float(new_local->value,
                     powf(*((float*)left->data), *((float*)right->data)));
                 break;
+            default:
+                printf("No handling for this instruction type: %d\n",
+                        inst->type);
+                exit(EXIT_FAILURE);
             }
         }
         else if (left->type == TYPE_LONG_DOUBLE &&
@@ -243,6 +255,10 @@ void interpret(struct State* state)
                     powf(*((long double*)left->data),
                          *((long double*)right->data)));
                 break;
+            default:
+                printf("No handling for this instruction type: %d\n",
+                        inst->type);
+                exit(EXIT_FAILURE);
             }
         }
         else

@@ -1005,6 +1005,7 @@ void* solve_thread(void* ptr)
     free(ctx.pattern_mask);
 
     args->ret_done = true;
+    return NULL;
 }
 
 struct SolveThreadInfo
@@ -1037,8 +1038,7 @@ void print_total_status(struct SolveThreadInfo info[], int threads,
         printf("\r");
     }
 
-    printf("\rtotal: %d, running %.0f/sec", total_completed,
-            run_rate);
+    printf("\rtotal: %lu, running %.0f/sec", total_completed, run_rate);
 
     if (!interactive)
     {

@@ -69,6 +69,7 @@ enum VarType var_type_fromstring(char* input)
         return TYPE_STRING;
 
     printf("String [%s] cannot be parsed into a VarType\n", input);
+    exit(EXIT_FAILURE);
 }
 
 char* param_type_tostring(enum ParamType input)
