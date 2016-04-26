@@ -1,0 +1,18 @@
+# Area of an ellipse
+# A = pi * r1 * r2
+
+depth 3
+
+precision f0.5
+
+constant f3.14159
+
+pattern mul
+
+input r1
+input r2
+
+case f2.0 f3.0 f18.79
+case f18.0 f2.0 f112.74
+case f0.3 f0.7 f0.66
+
