@@ -29,3 +29,12 @@ View the line-by-line debug output including local dumps:
 ```bash
 cat output/debug
 ```
+
+# Cluster
+
+## Deployment
+
+### Cluster worker deployment on Linode
+
+To quickly launch cold cluster worker instances on Linode, use this
+[StackScript](https://www.linode.com/stackscripts/view/19130).
