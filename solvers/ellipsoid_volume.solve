@@ -1,0 +1,19 @@
+# Ellipsoid volume
+# 4/3 * pi * r1 * r2 * r3
+
+depth 4
+
+precision f0.1
+
+constant f3.14159
+constant f1.33333
+
+pattern mul
+
+input r1
+input r2
+input r3
+
+case f2.0 f8.0 f4.0 f268.08
+case f7.0 f2.0 f3.5 f205.25
+
