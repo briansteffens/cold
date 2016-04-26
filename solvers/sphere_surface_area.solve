@@ -1,0 +1,18 @@
+# Sphere surface area
+# 4 * pi * r^2
+
+depth 3
+
+precision f0.1
+
+constant f3.14159
+constant f4.0
+
+pattern mul
+
+input r
+
+case f2.0 f50.27
+case f1.5 f28.27
+case f13.0 f2123.72
+
