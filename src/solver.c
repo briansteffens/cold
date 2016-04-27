@@ -168,155 +168,215 @@ struct Instruction* instruction_clone(struct Instruction* orig)
     return ret;
 }
 
-// Calculate all possible replacement params for a param pattern
-struct Param** vary_params(struct Context* ctx, struct State* state,
-    struct Param* pattern, int* output_count)
+// Count all possible substitutions for a param pattern
+int count_param_substitutions(struct Context* ctx, struct State* state,
+    struct Param* pattern)
 {
     int flags = *((int*)pattern->value->data);
 
     int count = 0;
+
     if (flags & PTRN_LOCALS)
+    {
         count += state->local_count;
-    if (flags & PTRN_CONSTANTS)
-        count += ctx->constant_count;
-
-    if (count == 0)
-    {
-        printf("ERROR: Unable to vary a parameter\n");
-        exit(0);
     }
 
-    struct Param** ret = malloc(count * sizeof(struct Param*));
-    int current = 0;
+    if (flags & PTRN_CONSTANTS)
+    {
+        count += ctx->constant_count;
+    }
+
+    return count;
+}
+
+// Find and clone the permutation indicated by the index out of the possible
+// variations of [param]. [permutation_index] should be in a range between 0
+// and the result of count_param_substitutions() for the same [param].
+//
+// The return value must be freed by the caller.
+struct Param* permute_param(struct Context* ctx, struct State* state,
+    struct Param* param, int permutation_index)
+{
+    struct Param* ret = malloc(sizeof(struct Param));
+    int flags = *((int*)param->value->data);
 
     if (flags & PTRN_LOCALS)
     {
-        for (int i = 0; i < state->local_count; i++)
+        if (permutation_index < state->local_count)
         {
-            ret[current] = malloc(sizeof(struct Param));
-            ret[current]->value = malloc(sizeof(struct Value));
-            ret[current]->type = PARAM_LABEL;
-            value_set_string(ret[current]->value, state->locals[i]->name);
-            current++;
+            ret->value = malloc(sizeof(struct Value));
+            ret->type = PARAM_LABEL;
+            value_set_string(ret->value,
+                    state->locals[permutation_index]->name);
+            return ret;
         }
+
+        permutation_index -= state->local_count;
     }
 
     if (flags & PTRN_CONSTANTS)
     {
-        for (int i = 0; i < ctx->constant_count; i++)
+        if (permutation_index < ctx->constant_count)
         {
-            ret[current] = malloc(sizeof(struct Param));
-            ret[current]->value = value_clone(&ctx->constants[i]);
-            ret[current]->type = PARAM_LITERAL;
-            current++;
+            ret->value = value_clone(&ctx->constants[permutation_index]);
+            ret->type = PARAM_LITERAL;
+            return ret;
+        }
+
+        permutation_index -= ctx->constant_count;
+    }
+
+    printf("Permutation index %d invalid\n", permutation_index);
+    exit(EXIT_FAILURE);
+}
+
+// Compute all permutations of pattern param in a given [instruction].
+//
+// The return value must be freed by the caller.
+struct Param*** permute_params(struct Context* ctx, struct State* state,
+    struct Instruction* instruction, int* out_permutation_count)
+{
+    int pattern_param_count = 0;
+    struct Param** pattern_params = malloc(0);
+    int* permutation_counts = malloc(0);
+    int permutation_count = 1;
+
+    for (int i = 0; i < instruction->param_count; i++)
+    {
+        if (instruction->params[i]->type == PARAM_PATTERN)
+        {
+            pattern_param_count++;
+
+            // Add to the list of pattern params being permuted
+            pattern_params = realloc(pattern_params,
+                    pattern_param_count * sizeof(struct Param*));
+            pattern_params[pattern_param_count - 1] = instruction->params[i];
+
+            // Store the number of permutations possible for this param
+            permutation_counts = realloc(permutation_counts,
+                    pattern_param_count * sizeof(int));
+            permutation_counts[pattern_param_count - 1] =
+                count_param_substitutions(ctx, state,
+                    pattern_params[pattern_param_count - 1]);
+
+            // Compute the total number of permutations for the instruction
+            permutation_count *= permutation_counts[pattern_param_count - 1];
         }
     }
 
-    *output_count = current;
+    struct Param*** ret = malloc(permutation_count * sizeof(struct Param**));
+
+    for (int i = 0; i < permutation_count; i++)
+    {
+        ret[i] = malloc(pattern_param_count * sizeof(struct Param**));
+    }
+
+    int repeat = 1;
+
+    // The return value is a 2-dimensional array. Fill it vertical-first.
+    for (int depth = 0; depth < pattern_param_count; depth++)
+    {
+        int p = 0;
+
+        // Fill the whole return value vertically before moving on to the next
+        // depth level.
+        while (p < permutation_count)
+        {
+            for (int i = 0; i < permutation_counts[depth]; i++)
+            {
+                // Repeat each permutation at this depth based on permutations
+                // from previous depths
+                for (int r = 0; r < repeat; r++)
+                {
+                    // Clone the param
+                    ret[p][depth] = permute_param(ctx, state,
+                            pattern_params[depth], i);
+
+                    p++;
+                }
+            }
+        }
+
+        // The number of times each value should be repeated is the number of
+        // permutations possible for the previous depth levels.
+        repeat *= permutation_counts[depth];
+    }
+
+    free(pattern_params);
+    free(permutation_counts);
+
+    *out_permutation_count = permutation_count;
     return ret;
 }
 
-struct Instruction** vary_instructions(struct Context* ctx,
-    struct State* input, struct Instruction* inst, int* instruction_count)
+// Calculate all possible permutations of the given [instruction].
+//
+// The return value must be freed by the caller.
+struct Instruction** permute_instruction(struct Context* ctx,
+    struct State* state, struct Instruction* instruction,
+    int* instruction_count)
 {
-    // TODO: why do we allocate for 1 with a count of 0?
-    struct Instruction** ret = malloc(1 * sizeof(struct Instruction*));
-    *instruction_count = 0;
+    // Get all param permutations
+    int permutation_count = 0;
+    struct Param*** permutations = permute_params(ctx, state, instruction,
+            &permutation_count);
 
-    // Loop through the parameters in the instruction checking for patterns
-    for (int i = 0; i < inst->param_count; i++)
+    struct Instruction** ret = malloc(
+            permutation_count * sizeof(struct Instruction*));
+
+    // For each param permutation, clone the instruction and replace the
+    // pattern params with the permutation values
+    for (int i = 0; i < permutation_count; i++)
     {
-        // Non-patterns don't need to be replaced (varied)
-        if (inst->params[i]->type != PARAM_PATTERN)
-            continue;
+        ret[i] = instruction_clone(instruction);
 
-        // Get the set of possible params to replace the pattern param with
-        int param_count = 0;
-        struct Param** varied = vary_params(ctx, input, inst->params[i],
-            &param_count);
+        int r = 0;
 
-        // For each possible param, clone the current instruction and
-        // substitute the pattern param for each variance
-        for (int p = 0; p < param_count; p++)
+        for (int p = 0; p < ret[i]->param_count; p++)
         {
-            struct Instruction* new_inst = instruction_clone(inst);
-
-            value_free(new_inst->params[i]->value);
-            free(new_inst->params[i]);
-
-            new_inst->params[i] = varied[p];
-
-            // Since there can be multiple pattern params in an instruction,
-            // recur on each new clone to generate any further variances
-            int recur_count = 0;
-            struct Instruction** recurs = vary_instructions(ctx, input,
-                new_inst, &recur_count);
-
-            // Combine the result of the recursion with any results from this
-            // run of the function
-            // TODO: recursion isn't a great way to do this, rework function
-            ret = realloc(ret, (*instruction_count + recur_count) *
-                          sizeof(struct Instruction*));
-
-            bool was_new_inst_replaced = true;
-
-            for (int j = 0; j < recur_count; j++)
+            if (ret[i]->params[p]->type != PARAM_PATTERN)
             {
-                if (recurs[j] == new_inst)
-                {
-                    was_new_inst_replaced = false;
-                }
-
-                ret[*instruction_count] = recurs[j];
-                *instruction_count = *instruction_count + 1;
+                continue;
             }
 
-            if (was_new_inst_replaced)
-            {
-                instruction_free(new_inst);
-                free(new_inst);
-            }
+            // Free the pattern being replaced
+            value_free(ret[i]->params[p]->value);
+            free(ret[i]->params[p]);
 
-            free(recurs);
+            // Replace the pattern param
+            ret[i]->params[p] = permutations[i][r];
+            r++;
         }
-
-        free(varied);
-
-        break;
     }
 
-    // If there were no variances found, return the original input
-    if (*instruction_count == 0)
+    for (int i = 0; i < permutation_count; i++)
     {
-        ret = realloc(ret, 1 * sizeof(struct Instruction*));
-        ret[0] = inst;
-        *instruction_count = 1;
+        free(permutations[i]);
     }
 
+    free(permutations);
+
+    *instruction_count = permutation_count;
     return ret;
 }
 
 struct State** vary(struct Context* ctx, struct State* input, int* state_count)
 {
-    struct Instruction** insts = vary_instructions(ctx, input,
-        input->instructions[input->inst_ptr], state_count);
+    int inst_count = 0;
+    struct Instruction** insts = permute_instruction(ctx, input,
+            input->instructions[input->inst_ptr], &inst_count);
 
-    // If the instruction was varied (forked into multiple instructions),
-    // then they are new copies and the new forked states "own" them.
-    // Otherwise they're pointing to the input state's instruction.
-    bool did_vary = (*state_count > 1 ||
-            input->instructions[input->inst_ptr] != insts[0]);
+    struct State** ret = malloc(inst_count * sizeof(struct State*));
 
-    struct State** ret = malloc(*state_count * sizeof(struct State*));
-
-    for (int i = 0; i < *state_count; i++)
+    for (int i = 0; i < inst_count; i++)
     {
         ret[i] = state_fork(input);
         ret[i]->instructions[ret[i]->inst_ptr] = insts[i];
-        ret[i]->instructions_owned[ret[i]->inst_ptr] = did_vary;
+        ret[i]->instructions_owned[ret[i]->inst_ptr] = true;
     }
 
     free(insts);
+    *state_count = inst_count;
 
     return ret;
 }
