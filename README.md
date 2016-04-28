@@ -1,30 +1,42 @@
+cold
+====
+
+# Downloading and compiling
+
+You'll need git to download the source code and gcc to compile it.
+
+In Debian-distros:
+
+```bash
+sudo apt-get update
+sudo apt-get install git
+sudo apt-get install build-essential
+git clone https://github.com/briansteffens/ccold
+cd ccold
+make
+```
+
 # Usage
 
 Find a program for E=MC^2:
 
 ```bash
-bin/cold solve --output-all solvers/emc2.solve
+bin/cold solve solvers/emc2.solve
 ```
 
-View all programs generated in the process:
+Find all programs for E=MC^2:
 
 ```bash
-cat output/generated_programs
+bin/cold solve solvers/emc2.solve --all
 ```
 
-View the solution program:
+Run a program with an input argument of 2:
 
 ```bash
-cat output/solution.cold
+bin/cold run example/basic.cold i2
 ```
 
-Run the solution program (with an input argument of 0.25):
-
-```bash
-bin/cold run output/solution.cold f0.25
-```
-
-View the line-by-line debug output including local dumps:
+View the line-by-line debug output including variable dumps:
 
 ```bash
 cat output/debug
