@@ -230,16 +230,65 @@ struct Param* permute_param(struct Context* ctx, struct State* state,
     exit(EXIT_FAILURE);
 }
 
-// Compute all permutations of pattern param in a given [instruction].
+// Filter equivalent instructions (x + y vs y + x) by masking out instructions
+// detected to be functionally equivalent to others within the permutation set.
+void unique_mask(enum InstructionType instruction_type, int** permutations,
+        int permutation_count, int param_count, bool* out_mask)
+{
+    bool commutative = param_count == 3 &&
+            (instruction_type == INST_ADD || instruction_type == INST_MUL);
+
+    int* found[permutation_count];
+    int found_count = 0;
+
+    for (int p = 0; p < permutation_count; p++)
+    {
+        if (!commutative)
+        {
+            out_mask[p] = true;
+            continue;
+        }
+
+        bool unique = true;
+
+        for (int f = 0; f < found_count; f++)
+        {
+            // Commutative check
+            if (found[f][0] == permutations[p][0] &&
+                found[f][1] == permutations[p][2] &&
+                found[f][2] == permutations[p][1])
+            {
+                unique = false;
+                break;
+            }
+        }
+
+        out_mask[p] = unique;
+
+        if (!unique)
+        {
+            continue;
+        }
+
+        found[found_count] = permutations[p];
+        found_count++;
+    }
+}
+
+// Compute all permutations of pattern params in a given [instruction].
 //
 // The return value must be freed by the caller.
 struct Param*** permute_params(struct Context* ctx, struct State* state,
     struct Instruction* instruction, int* out_permutation_count)
 {
+    // ------------------------------------------------------------------------
+    // --- INFORMATION GATHERING ----------------------------------------------
+    // ------------------------------------------------------------------------
+
     int pattern_param_count = 0;
     struct Param** pattern_params = malloc(0);
     int* permutation_counts = malloc(0);
-    int permutation_count = 1;
+    int all_count = 1;
 
     for (int i = 0; i < instruction->param_count; i++)
     {
@@ -260,15 +309,19 @@ struct Param*** permute_params(struct Context* ctx, struct State* state,
                     pattern_params[pattern_param_count - 1]);
 
             // Compute the total number of permutations for the instruction
-            permutation_count *= permutation_counts[pattern_param_count - 1];
+            all_count *= permutation_counts[pattern_param_count - 1];
         }
     }
 
-    struct Param*** ret = malloc(permutation_count * sizeof(struct Param**));
+    // ------------------------------------------------------------------------
+    // --- CALCULATE PERMUTATIONS ---------------------------------------------
+    // ------------------------------------------------------------------------
 
-    for (int i = 0; i < permutation_count; i++)
+    int** all = malloc(all_count * sizeof(int*));
+
+    for (int i = 0; i < all_count; i++)
     {
-        ret[i] = malloc(pattern_param_count * sizeof(struct Param**));
+        all[i] = malloc(pattern_param_count * sizeof(int));
     }
 
     int repeat = 1;
@@ -280,7 +333,7 @@ struct Param*** permute_params(struct Context* ctx, struct State* state,
 
         // Fill the whole return value vertically before moving on to the next
         // depth level.
-        while (p < permutation_count)
+        while (p < all_count)
         {
             for (int i = 0; i < permutation_counts[depth]; i++)
             {
@@ -288,10 +341,8 @@ struct Param*** permute_params(struct Context* ctx, struct State* state,
                 // from previous depths
                 for (int r = 0; r < repeat; r++)
                 {
-                    // Clone the param
-                    ret[p][depth] = permute_param(ctx, state,
-                            pattern_params[depth], i);
-
+                    // Set the param index for this permutation at this depth
+                    all[p][depth] = i;
                     p++;
                 }
             }
@@ -302,10 +353,64 @@ struct Param*** permute_params(struct Context* ctx, struct State* state,
         repeat *= permutation_counts[depth];
     }
 
+    // Filter out useless permutations
+    bool mask[all_count];
+    unique_mask(instruction->type, all, all_count, pattern_param_count, mask);
+
+    // Count permutations that passed the unique mask filtering
+    int ret_count = 0;
+
+    for (int p = 0; p < all_count; p++)
+    {
+        if (mask[p])
+        {
+            ret_count++;
+        }
+    }
+
+    // ------------------------------------------------------------------------
+    // --- GENERATE OUTPUT ----------------------------------------------------
+    // ------------------------------------------------------------------------
+
+    struct Param*** ret = malloc(ret_count * sizeof(struct Param**));
+
+    int ret_i = 0;
+
+    for (int all_i = 0; all_i < all_count; all_i++)
+    {
+        // Skip if not in the unique mask
+        if (!mask[all_i])
+        {
+            continue;
+        }
+
+        ret[ret_i] = malloc(pattern_param_count * sizeof(struct Param*));
+
+        for (int p = 0; p < pattern_param_count; p++)
+        {
+            ret[ret_i][p] = permute_param(ctx, state, pattern_params[p],
+                    all[all_i][p]);
+        }
+
+        ret_i++;
+    }
+
+    // ------------------------------------------------------------------------
+    // --- CLEANUP ------------------------------------------------------------
+    // ------------------------------------------------------------------------
+
+    for (int i = 0; i < all_count; i++)
+    {
+        free(all[i]);
+    }
+
+    free(all);
+
     free(pattern_params);
     free(permutation_counts);
 
-    *out_permutation_count = permutation_count;
+    *out_permutation_count = ret_count;
+
     return ret;
 }
 
