@@ -44,7 +44,7 @@ The structure of a cold cluster is as follows:
   Implemented in `cluster/server.py`.
 
 - **Worker(s)** - Worker instances poll a server for work to be done, shell out
-  to the cold binary `bin/ccold`, and send results back to the server.
+  to the cold binary `bin/cold`, and send results back to the server.
   Implemented in `cluster/worker.py`.
 
 ## Deployment on Linode
