@@ -837,6 +837,9 @@ void step_vary(struct Context* ctx, struct State* state)
     free(varied);
 }
 
+// Interpret the current line in each of the given [states], forking the
+// interpeter state as necessary for any possible permutations of the
+// current instruction.
 void step(struct Context* ctx, struct State** states, int state_count)
 {
     for (int i = 0; i < state_count; i++)
@@ -1039,6 +1042,7 @@ void parse_solver_file(struct Context* ctx, const char* solver_file)
     free(lines);
 }
 
+// Solve a single assembly
 void* solve_thread(void* ptr)
 {
     struct SolveThreadArgs* args = (struct SolveThreadArgs*)ptr;
@@ -1193,6 +1197,7 @@ struct SolveThreadInfo
     bool started;
 };
 
+// Output solver status to STDOUT
 void print_total_status(struct SolveThreadInfo info[], int threads,
         int completed_by_old_threads, time_t program_start, bool interactive)
 {
@@ -1226,6 +1231,7 @@ void print_total_status(struct SolveThreadInfo info[], int threads,
     fflush(stdout);
 }
 
+// Bootstrap a multi-threaded solve operation
 void solve(const char* solver_file, const char* output_dir, int threads,
         int assembly_start, int assembly_count, bool interactive,
         bool print_solutions, bool find_all_solutions, bool output_generated)
