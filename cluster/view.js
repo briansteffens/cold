@@ -29,7 +29,10 @@ var View = React.createClass({
     setInterval(this.serverUpdate, 1000);
   },
   run: function() {
-    this.sendToServer({'command': 'run'});
+    this.sendToServer({
+      'command': 'run',
+      'solver': this.refs.solver.value,
+    });
   },
   stop: function() {
     this.sendToServer({'command': 'stop'});
@@ -106,6 +109,8 @@ var View = React.createClass({
           unpause</button>);
     }
 
+    buttons.push(<button onClick={this.reset}>reset</button>);
+
     let solutions = [];
     for (let i = 0; i < this.state.server.solutions.length; i++) {
         solutions.push(<pre key={i}>{this.state.server.solutions[i]}</pre>);
@@ -140,7 +145,6 @@ var View = React.createClass({
             { solverOptions }
           </select>
           <textarea ref="solver" defaultValue={solverDefault}></textarea>
-          <button onClick={this.reset}>set solver</button>
         </div>
         <div id="cluster">
           status: { status } { buttons }

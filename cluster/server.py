@@ -38,13 +38,14 @@ next_unsolved_index = 0
 total_run = 0
 solutions = []
 
-def set_solver(text):
+def reset(text):
     global solver
     global total_assemblies
     global assemblies_unsolved
     global next_unsolved_index
     global total_run
     global solutions
+    global workers
 
     solver = text
 
@@ -68,6 +69,7 @@ def set_solver(text):
     next_unsolved_index = 0
     total_run = 0
     solutions = []
+    workers = []
 
 # Solvers on disk
 solvers = []
@@ -83,7 +85,7 @@ for solver_fn in glob.glob('solvers/*.solve'):
 
 # Default to the first solver in the list
 if len(solvers):
-    set_solver(solvers[0]['text'])
+    reset(solvers[0]['text'])
 
 app = Flask(__name__)
 
@@ -121,6 +123,7 @@ def style():
 @app.route('/console_update', methods=['POST'])
 @requires_auth
 def console_update():
+    global solver
     global status
     global workers
     global solutions
@@ -136,6 +139,10 @@ def console_update():
         elif req['command'] == 'run':
             status = 'running'
 
+            # If the solver has changed, reset
+            if req['solver'] != solver:
+                reset(req['solver'])
+
         elif req['command'] == 'pause':
             status = 'paused'
 
@@ -146,8 +153,7 @@ def console_update():
             if status == 'running':
                 status = 'stopped'
 
-            workers = []
-            set_solver(req['solver'])
+            reset(req['solver'])
 
     res = {
         'status': status,
