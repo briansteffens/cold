@@ -106,24 +106,6 @@ var View = React.createClass({
           unpause</button>);
     }
 
-    let solverDefault =
-      '\n# G((m1 * m2) / (r ^ 2))\n\n' +
-      'depth 4\n\n' +
-      'precision D1E2\n\n' +
-      'constant D6.67408E-11 # Gravitational constant\n' +
-      'constant D2E0\n\n' +
-      'pattern mul\n' +
-      'pattern div\n' +
-      'pattern exp\n\n' +
-      'input m1\n' +
-      'input m2\n' +
-      'input d\n\n' +
-      '# Earth mass, moon mass, distance, newtons\n' +
-      'case D5.972E24 D7.34767309E22 D3.8E8 D2.028121E20';
-
-    solverDefault =
-      'depth 1\npattern add\ninput z\ncase i2 i4\ncase i3 i6\n';
-
     let solutions = [];
     for (let i = 0; i < this.state.server.solutions.length; i++) {
         solutions.push(<pre key={i}>{this.state.server.solutions[i]}</pre>);
@@ -143,6 +125,12 @@ var View = React.createClass({
       let solver = this.state.solvers[i];
 
       solverOptions.push(<option key={solver.name}>{solver.name}</option>);
+    }
+
+    let solverDefault = '';
+
+    if (this.state.solvers.length > 0) {
+        solverDefault = this.state.solvers[0].text;
     }
 
     return (
