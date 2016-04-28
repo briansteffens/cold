@@ -32,7 +32,27 @@ cat output/debug
 
 # Cluster
 
+Cold has a clustering system for spreading the work of a solver across multiple
+computers. The clustering system is written in Python and operates over HTTP.
+HTTPS is possible in combination with a reverse proxy web server like nginx or
+apache to terminate SSL.
+
+The structure of a cold cluster is as follows:
+
+- **Server** - This facilitates communication between the user and the
+  worker machines. The user controls the cluster through a web-based console.
+  Implemented in `cluster/server.py`.
+
+- **Worker(s)** - Worker instances poll a server for work to be done, shell out
+  to the cold binary `bin/ccold`, and send results back to the server.
+  Implemented in `cluster/worker.py`.
+
 ## Deployment on Linode
+
+*Note: this deployment option currently uses HTTP for communication between
+workers, the server, and the console. Don't reuse a password you use for other
+services as the token and don't enter any information into the console you
+don't want getting out.*
 
 ### Server
 
@@ -42,9 +62,6 @@ value you set for the `token` field, as it will be needed for logging into the
 web console and for subscribing cluster workers to this server. If you want to
 work off of a fork or particular branch, customize the `git_source` and
 `git_branch` fields.
-
-*Note: this will bring up a cluster server that uses HTTP. Don't use a password
-from another service as your token as it's not secure.*
 
 ### Workers
 
