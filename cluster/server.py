@@ -69,26 +69,38 @@ def set_solver(text):
     total_run = 0
     solutions = []
 
-with open('solvers/gravity.solve') as f:
-    set_solver(f.read())
+# Solvers on disk
+solvers = []
+
+# Load the solvers from disk
+for solver_fn in glob.glob('solvers/*.solve'):
+    name = solver_fn.replace('solvers/', '').replace('.solve', '')
+    with open(solver_fn) as f:
+        solvers.append({
+            'name': solver_fn.replace('solvers/', '').replace('.solve', ''),
+            'text': f.read(),
+        })
+
+# Default to the first solver in the list
+if len(solvers):
+    set_solver(solvers[0]['text'])
 
 app = Flask(__name__)
 
 @app.route('/')
 @requires_auth
 def index():
-    solvers = []
+    global solvers
 
-    for solver_fn in glob.glob('solvers/*.solve'):
-        with open(solver_fn) as f:
-            name = solver_fn.replace('solvers/', '').replace('.solve', '')
-            text = f.read().replace('\n', '\\n')
-            solvers.append("{name: '"+name+"',text: '"+text+"'}")
+    solver_json = ','.join([
+        "{name: '" + s['name'] + "'," +
+        "text: '" + s['text'].replace('\n', '\\n') + "'}"
+        for s in solvers])
 
     with open('cluster/index.html') as f:
         ret = f.read()
 
-        return ret.replace('{solvers}', ','.join(solvers))
+        return ret.replace('{solvers}', solver_json)
 
 @app.route('/view.js')
 @requires_auth
@@ -295,4 +307,4 @@ def worker_status():
     return json.dumps(ret)
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', debug=True)
