@@ -78,6 +78,9 @@ bool add_pattern(struct Context* ctx, const char* filename)
     return true;
 }
 
+// Find a single permutation of source code patterns identified by [target]
+// where [target] is the index of the permutation between 0 and
+// [patterns] ^ [maxdepth].
 void permute(int result[], int max_depth, int patterns, int target)
 {
     int total_permutations = exponent(patterns, max_depth);
@@ -114,6 +117,10 @@ void permute(int result[], int max_depth, int patterns, int target)
     }
 }
 
+// Clone an interpreter state, leaving pointers to the [orig] state's locals
+// and instructions.
+//
+// The return value must be freed by the caller.
 struct State* state_fork(struct State* orig)
 {
     struct State* ret = malloc(sizeof(struct State));
@@ -146,6 +153,9 @@ struct State* state_fork(struct State* orig)
     return ret;
 }
 
+// Clone an instruction.
+//
+// The return value must be freed by the caller.
 struct Instruction* instruction_clone(struct Instruction* orig)
 {
     struct Instruction* ret = malloc(sizeof(struct Instruction));
@@ -465,6 +475,9 @@ struct Instruction** permute_instruction(struct Context* ctx,
     return ret;
 }
 
+// Fork the state [input] for each permutation of the current instruction.
+//
+// The return value must be freed by the caller.
 struct State** vary(struct Context* ctx, struct State* input, int* state_count)
 {
     int inst_count = 0;
