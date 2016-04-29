@@ -100,16 +100,15 @@ var View = React.createClass({
       buttons.push(<button key='run' onClick={this.run}>run</button>);
     }
 
+    buttons.push(<button onClick={this.reset}>reset</button>);
+
     if (status === 'running' || status === 'stopped') {
-      buttons.push(<button key='pause' onClick={this.pause}>pause</button>);
+      buttons.push(<button key='disarm' onClick={this.pause}>disarm</button>);
     }
 
     if (status === 'paused') {
-      buttons.push(<button key='unpause' onClick={this.unpause}>
-          unpause</button>);
+      buttons.push(<button key='arm' onClick={this.unpause}>arm</button>);
     }
-
-    buttons.push(<button onClick={this.reset}>reset</button>);
 
     let solutions = [];
     for (let i = 0; i < this.state.server.solutions.length; i++) {
