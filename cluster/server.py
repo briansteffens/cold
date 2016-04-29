@@ -69,7 +69,14 @@ def reset(text):
     next_unsolved_index = 0
     total_run = 0
     solutions = []
-    workers = []
+
+    for worker in workers:
+        worker['run_rate'] = None
+        worker['assemblies_completed'] = []
+        worker['run_samples'] = []
+        worker['assemblies_running'] = []
+        worker['assemblies_queued'] = []
+        worker['programs_run'] = 0
 
 # Solvers on disk
 solvers = []
