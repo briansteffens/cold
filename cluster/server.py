@@ -241,7 +241,8 @@ def worker_status():
                                    if a not in ac]
 
     # End execution
-    if assemblies_unsolved is None or len(assemblies_unsolved) == 0:
+    if status != 'disarmed' and (assemblies_unsolved is None or
+                                 len(assemblies_unsolved) == 0):
         status = 'stopped'
 
     # Calculate run sample
