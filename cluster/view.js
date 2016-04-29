@@ -70,22 +70,48 @@ var View = React.createClass({
       return (<div>connecting..</div>);
     }
 
+    let numberSuffix = function(num) {
+      let suffix_index = 0;
+      let suffixes = ['', 'k', 'm', 'b', 't', 'q'];
+
+      for (let i = 0; i < suffixes.length; i++) {
+        if (num < 1000) {
+          return num + suffixes[i];
+        }
+
+        let temp = num.toString();
+        num = parseInt(temp.substr(0, temp.length - 4));
+      }
+
+      return num + suffixes[suffixes.length - 1];
+    };
+
     let workers = [];
     let total_run_rate = 0;
 
     for (let worker of this.state.server.workers) {
+      let run_rate = '';
+      if (worker.run_rate) {
+        run_rate = numberSuffix(worker.run_rate) + '/sec';
+      }
+
       workers.push(
         <tr key={worker.worker_id}>
           <td>{worker.worker_id}</td>
           <td>{worker.cores}</td>
-          <td>{worker.run_rate ? worker.run_rate + '/sec' : ''}</td>
-          <td>{worker.programs_run}</td>
+          <td>{run_rate}</td>
+          <td>{worker.programs_run.toLocaleString()}</td>
           <td>{worker.assemblies_completed}</td>
           <td>{worker.status}</td>
         </tr>
       );
 
       total_run_rate += worker.run_rate;
+    }
+
+    let run_rate = '';
+    if (total_run_rate > 0) {
+      run_rate = numberSuffix(total_run_rate) + '/sec';
     }
 
     let status = this.state.server.status;
@@ -134,7 +160,7 @@ var View = React.createClass({
     let solverDefault = '';
 
     if (this.state.solvers.length > 0) {
-        solverDefault = this.state.solvers[0].text;
+      solverDefault = this.state.solvers[0].text;
     }
 
     return (
@@ -148,11 +174,11 @@ var View = React.createClass({
         <div id="cluster">
           status: { status } { buttons }
           <br />
-          programs run: { this.state.server.programs_run }
+          programs run: { this.state.server.programs_run.toLocaleString() }
           <br />
           assemblies run: { this.state.server.solved.length }
           <br />
-          rate: { total_run_rate }/sec
+          rate: { run_rate }
           <br />
           <table border="1">
             <thead>
