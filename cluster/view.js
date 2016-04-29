@@ -37,11 +37,11 @@ var View = React.createClass({
   stop: function() {
     this.sendToServer({'command': 'stop'});
   },
-  pause: function() {
-    this.sendToServer({'command': 'pause'});
+  disarm: function() {
+    this.sendToServer({'command': 'disarm'});
   },
-  unpause: function() {
-    this.sendToServer({'command': 'unpause'});
+  arm: function() {
+    this.sendToServer({'command': 'arm'});
   },
   reset: function() {
     this.sendToServer({
@@ -96,18 +96,18 @@ var View = React.createClass({
       buttons.push(<button key='stop' onClick={this.stop}>stop</button>);
     }
 
-    if (status === 'stopped' || status === 'paused') {
+    if (status === 'stopped' || status === 'disarmed') {
       buttons.push(<button key='run' onClick={this.run}>run</button>);
     }
 
     buttons.push(<button onClick={this.reset}>reset</button>);
 
     if (status === 'running' || status === 'stopped') {
-      buttons.push(<button key='disarm' onClick={this.pause}>disarm</button>);
+      buttons.push(<button key='disarm' onClick={this.disarm}>disarm</button>);
     }
 
-    if (status === 'paused') {
-      buttons.push(<button key='arm' onClick={this.unpause}>arm</button>);
+    if (status === 'disarmed') {
+      buttons.push(<button key='arm' onClick={this.arm}>arm</button>);
     }
 
     let solutions = [];

@@ -143,10 +143,10 @@ def console_update():
             if req['solver'] != solver:
                 reset(req['solver'])
 
-        elif req['command'] == 'pause':
-            status = 'paused'
+        elif req['command'] == 'disarm':
+            status = 'disarmed'
 
-        elif req['command'] == 'unpause':
+        elif req['command'] == 'arm':
             status = 'stopped'
 
         elif req['command'] == 'reset':
@@ -167,8 +167,8 @@ def console_update():
     for w in workers:
         worker_status = 'inactive'
 
-        if w['last_status_sent'] == 'paused':
-            worker_status = 'paused'
+        if w['last_status_sent'] == 'disarmed':
+            worker_status = 'disarmed'
         elif (datetime.now() - w['last_checkin']).total_seconds() < 5:
             worker_status = 'active'
 
