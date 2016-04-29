@@ -78,7 +78,7 @@ var View = React.createClass({
         <tr key={worker.worker_id}>
           <td>{worker.worker_id}</td>
           <td>{worker.cores}</td>
-          <td>{worker.run_rate}/sec</td>
+          <td>{worker.run_rate ? worker.run_rate + '/sec' : ''}</td>
           <td>{worker.programs_run}</td>
           <td>{worker.assemblies_completed}</td>
           <td>{worker.status}</td>

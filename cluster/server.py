@@ -257,7 +257,7 @@ def worker_status():
         del worker['run_samples'][0]
 
     # Calculate run rate
-    if len(worker['run_samples']) <= 1:
+    if len(worker['run_samples']) <= 1 or status != 'running':
         worker['run_rate'] = None
     else:
         run_rates = []
