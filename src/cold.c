@@ -260,6 +260,19 @@ void value_tostring(struct Value* val, char* buf, int n)
     }
 }
 
+// Deep copy a Value (including the data itself)
+struct Value* value_clone(const struct Value* src)
+{
+    struct Value* ret = malloc(sizeof(struct Value));
+
+    ret->type = src->type;
+    ret->size = src->size;
+    ret->data = malloc(ret->size);
+    memcpy(ret->data, src->data, ret->size);
+
+    return ret;
+}
+
 // Free a Value and its associated data
 void value_free(struct Value* value)
 {
@@ -345,6 +358,31 @@ void instruction_free(struct Instruction* inst)
     }
 
     free(inst->params);
+}
+
+// Clone an instruction.
+//
+// The return value must be freed by the caller.
+struct Instruction* instruction_clone(struct Instruction* orig)
+{
+    struct Instruction* ret = malloc(sizeof(struct Instruction));
+
+    ret->type = orig->type;
+    ret->param_count = orig->param_count;
+    ret->params = malloc(ret->param_count * sizeof(struct Param*));
+
+    for (int i = 0; i < ret->param_count; i++)
+    {
+        ret->params[i] = malloc(sizeof(struct Param));
+
+        ret->params[i]->type = orig->params[i]->type;
+        ret->params[i]->value = value_clone(orig->params[i]->value);
+
+        char buf[255];
+        instruction_tostring(orig, buf, 255);
+    }
+
+    return ret;
 }
 
 void free_function(struct Function* func)

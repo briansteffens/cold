@@ -24,19 +24,6 @@ struct Local* get_local(struct State* state, const char* name)
     return state->locals[find_local(state, name)];
 }
 
-// Deep copy a Value (including the data itself)
-struct Value* value_clone(const struct Value* src)
-{
-    struct Value* ret = malloc(sizeof(struct Value));
-
-    ret->type = src->type;
-    ret->size = src->size;
-    ret->data = malloc(ret->size);
-    memcpy(ret->data, src->data, ret->size);
-
-    return ret;
-}
-
 // Free a local and its associated value
 void local_free(struct Local* local)
 {
