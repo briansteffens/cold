@@ -29,48 +29,47 @@ if len(sys.argv) != 2:
 
 WORKER_TOKEN = sys.argv[1]
 
-status = 'stopped'
-workers = []
-solver = None
-total_assemblies = None
-assemblies_unsolved = None
-next_unsolved_index = 0
-total_run = 0
-solutions = []
+# Global state object
+class ServerState(object):
+    def __init__(self):
+        self.status = 'stopped'
+        self.workers = []
+        self.solver = None
+        self.total_assemblies = None
+        self.assemblies_unsolved = None
+        self.next_unsolved_index = 0
+        self.total_run = 0
+        self.solutions = []
+        self.solvers = []
 
-def reset(text):
-    global solver
-    global total_assemblies
-    global assemblies_unsolved
-    global next_unsolved_index
-    global total_run
-    global solutions
-    global workers
+state = ServerState()
 
-    solver = text
+# Reset the cluster state and set a new solver
+def reset(state, solver_text):
+    state.solver = solver_text
 
-    lines = text.split('\n')
+    lines = solver_text.split('\n')
 
-    patterns = []
-    depth = 1
+    state.patterns = []
+    state.depth = 1
 
     for line in lines:
         line = line.strip()
 
         if line.startswith('pattern '):
-            patterns.append(line[8:].strip())
+            state.patterns.append(line[8:].strip())
             continue
 
         if line.startswith('depth '):
-            depth = int(line[6:].strip())
+            state.depth = int(line[6:].strip())
 
-    total_assemblies = len(patterns) ** depth
-    assemblies_unsolved = [a for a in range(total_assemblies)]
-    next_unsolved_index = 0
-    total_run = 0
-    solutions = []
+    state.total_assemblies = len(state.patterns) ** state.depth
+    state.assemblies_unsolved = [a for a in range(state.total_assemblies)]
+    state.next_unsolved_index = 0
+    state.total_run = 0
+    state.solutions = []
 
-    for worker in workers:
+    for worker in state.workers:
         worker['run_rate'] = None
         worker['assemblies_completed'] = []
         worker['run_samples'] = []
@@ -78,45 +77,43 @@ def reset(text):
         worker['assemblies_queued'] = []
         worker['programs_run'] = 0
 
-# Solvers on disk
-solvers = []
-
 # Load the solvers from disk
 for solver_fn in glob.glob('solvers/*.solve'):
     name = solver_fn.replace('solvers/', '').replace('.solve', '')
     with open(solver_fn) as f:
-        solvers.append({
+        state.solvers.append({
             'name': solver_fn.replace('solvers/', '').replace('.solve', ''),
             'text': f.read(),
         })
 
 # Default to the first solver in the list
-if len(solvers):
-    reset(solvers[0]['text'])
+if len(state.solvers):
+    reset(state, state.solvers[0]['text'])
 
 app = Flask(__name__)
 
+# Console entrypoint
 @app.route('/')
 @requires_auth
 def index():
-    global solvers
-
     solver_json = ','.join([
         "{name: '" + s['name'] + "'," +
         "text: '" + s['text'].replace('\n', '\\n') + "'}"
-        for s in solvers])
+        for s in state.solvers])
 
     with open('cluster/index.html') as f:
         ret = f.read()
 
         return ret.replace('{solvers}', solver_json)
 
+# Console javascript
 @app.route('/view.js')
 @requires_auth
 def view():
     with open('cluster/view.js') as f:
         return f.read()
 
+# Console stylesheet
 @app.route('/style.css')
 @requires_auth
 def style():
@@ -127,51 +124,48 @@ def style():
 
     return res
 
+# Console AJAX update endpoint
 @app.route('/console_update', methods=['POST'])
 @requires_auth
 def console_update():
-    global solver
-    global status
-    global workers
-    global solutions
-    global assemblies_unsolved
+    global state
 
     req = request.get_json()
 
     if 'command' in req:
         if req['command'] == 'stop':
-            status = 'stopped'
-            solver = None
+            state.status = 'stopped'
+            state.solver = None
 
         elif req['command'] == 'run':
-            status = 'running'
+            state.status = 'running'
 
             # If the solver has changed, reset
-            if req['solver'] != solver:
-                reset(req['solver'])
+            if req['solver'] != state.solver:
+                reset(state, req['solver'])
 
         elif req['command'] == 'disarm':
-            status = 'disarmed'
+            state.status = 'disarmed'
 
         elif req['command'] == 'arm':
-            status = 'stopped'
+            state.status = 'stopped'
 
         elif req['command'] == 'reset':
-            if status == 'running':
-                status = 'stopped'
+            if state.status == 'running':
+                state.status = 'stopped'
 
-            reset(req['solver'])
+            reset(state, req['solver'])
 
     res = {
-        'status': status,
-        'programs_run': total_run,
+        'status': state.status,
+        'programs_run': state.total_run,
         'workers': [],
-        'solutions': solutions,
-        'unsolved': assemblies_unsolved,
+        'solutions': state.solutions,
+        'unsolved': state.assemblies_unsolved,
         'solved': [],
     }
 
-    for w in workers:
+    for w in state.workers:
         worker_status = 'inactive'
 
         if w['last_status_sent'] == 'disarmed':
@@ -195,21 +189,18 @@ def console_update():
 
     return json.dumps(res)
 
+# Worker update endpoint
 @app.route('/worker/status', methods=['POST'])
 def worker_status():
-    global assemblies_unsolved
-    global next_unsolved_index
-    global total_run
-    global status
-    global solutions
+    global state
 
     req = request.get_json()
 
     if req['token'] != WORKER_TOKEN:
         abort(403)
 
-    worker = next((w for w in workers if w['worker_id'] == req['worker_id']),
-            None)
+    worker = next((w for w in state.workers
+                   if w['worker_id'] == req['worker_id']), None)
 
     if worker is None:
         worker = {
@@ -221,13 +212,13 @@ def worker_status():
             'run_rate': None,
         }
 
-        workers.append(worker)
+        state.workers.append(worker)
 
     worker['last_checkin'] = datetime.now()
     worker['assemblies_running'] = req['assemblies_running']
     worker['assemblies_queued'] = req['assemblies_queued']
 
-    if status == 'running':
+    if state.status == 'running':
         # Remove assemblies from the unsolved list if they've been completed
         if 'assemblies_completed' in req:
             for ac_new in req['assemblies_completed']:
@@ -240,17 +231,17 @@ def worker_status():
 
                 if not found:
                     worker['assemblies_completed'].append(ac_new)
-                    total_run += ac_new['programs_completed']
-                    solutions.extend(ac_new['solutions'])
+                    state.total_run += ac_new['programs_completed']
+                    state.solutions.extend(ac_new['solutions'])
 
             ac = [a['assembly'] for a in req['assemblies_completed']]
-            assemblies_unsolved = [a for a in assemblies_unsolved
-                                   if a not in ac]
+            state.assemblies_unsolved = [a for a in state.assemblies_unsolved
+                                         if a not in ac]
 
     # End execution
-    if status != 'disarmed' and (assemblies_unsolved is None or
-                                 len(assemblies_unsolved) == 0):
-        status = 'stopped'
+    if state.status != 'disarmed' and (state.assemblies_unsolved is None or
+                                       len(state.assemblies_unsolved) == 0):
+        state.status = 'stopped'
 
     # Calculate run sample
     worker['programs_run'] = sum(a['programs_completed']
@@ -265,7 +256,7 @@ def worker_status():
         del worker['run_samples'][0]
 
     # Calculate run rate
-    if len(worker['run_samples']) <= 1 or status != 'running':
+    if len(worker['run_samples']) <= 1 or state.status != 'running':
         worker['run_rate'] = None
     else:
         run_rates = []
@@ -282,39 +273,41 @@ def worker_status():
 
     # Respond to worker
     ret = {
-        'status': status,
+        'status': state.status,
     }
 
-    worker['last_status_sent'] = status
+    worker['last_status_sent'] = state.status
 
     # Send the solver if needed
     if 'first_status' in req and req['first_status'] or \
        worker['last_solver_sent'] is None or \
-       worker['last_solver_sent'] != solver:
-        ret['solver'] = solver
-        worker['last_solver_sent'] = solver
+       worker['last_solver_sent'] != state.solver:
+        ret['solver'] = state.solver
+        worker['last_solver_sent'] = state.solver
 
     if ret['status'] == 'running':
         # Workers should have twice their number of cores in assemblies
         # running/queued at all times, unless there aren't enough unsolved
         # assemblies left
         current = len(worker['assemblies_running']) + \
-                len(worker['assemblies_queued'])
+                  len(worker['assemblies_queued'])
 
         ideal = worker['cores'] * 2
 
-        needed = min(ideal - current, len(assemblies_unsolved))
+        needed = min(ideal - current, len(state.assemblies_unsolved))
 
         if needed > 0:
             assigned = []
 
             while len(assigned) < needed:
-                if next_unsolved_index > len(assemblies_unsolved) - 1:
-                    next_unsolved_index = 0
+                if state.next_unsolved_index > \
+                   len(state.assemblies_unsolved) - 1:
+                    state.next_unsolved_index = 0
 
-                assigned.append(assemblies_unsolved[next_unsolved_index])
+                assigned.append(
+                        state.assemblies_unsolved[state.next_unsolved_index])
 
-                next_unsolved_index += 1
+                state.next_unsolved_index += 1
 
             ret['next_assemblies'] = assigned
 
