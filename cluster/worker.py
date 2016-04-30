@@ -183,4 +183,4 @@ while True:
         n = assembly_queue.pop(0)
         launch_process(n)
 
-    sleep(30 if res['status'] == 'paused' else 1)
+    sleep(30 if res['status'] == 'disarmed' else 1)
