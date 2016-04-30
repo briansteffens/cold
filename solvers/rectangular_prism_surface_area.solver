@@ -1,0 +1,21 @@
+# Surface area for rectangular prism
+# SA = 2lw + 2hw + 2lh
+#
+# (Very very long-running, currently unsolved)
+
+depth 8
+
+precision f0.1
+
+pattern add
+pattern mul
+
+constant f2.0
+
+input l
+input w
+input h
+
+case f1.0 f1.0 f1.0 f6.0
+case f1.0 f2.0 f3.0 f22.0
+case f20.0 f10.0 f100.0 f6400.0
