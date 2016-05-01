@@ -157,7 +157,7 @@ void permute_params_all(struct PermuteParamsInfo* info, int* all_ptr)
 // [all_ptr] should be a 2d array of size [info->all_count][info->param_count].
 // [out_mask] should be an array of size [info->all_count].
 void unique_mask(struct PermuteParamsInfo* info,
-        enum InstructionType instruction_type, int* all_ptr, bool* out_mask)
+        InstructionType instruction_type, int* all_ptr, bool* out_mask)
 {
     // 2d array from pointer
     int(* all)[info->param_count] = (int(*)[info->param_count])all_ptr;

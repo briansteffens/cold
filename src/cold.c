@@ -5,7 +5,7 @@
 
 #include "cold.h"
 
-char* var_type_tostring(enum VarType input)
+char* var_type_tostring(ValueType input)
 {
     switch (input)
     {
@@ -23,7 +23,7 @@ char* var_type_tostring(enum VarType input)
     }
 }
 
-enum VarType var_type_fromstring(char* input)
+ValueType var_type_fromstring(char* input)
 {
     if (strcmp(input, "int") == 0)
         return TYPE_INT;
@@ -38,7 +38,7 @@ enum VarType var_type_fromstring(char* input)
     exit(EXIT_FAILURE);
 }
 
-char* param_type_tostring(enum ParamType input)
+char* param_type_tostring(ParamType input)
 {
     switch (input)
     {
@@ -54,7 +54,7 @@ char* param_type_tostring(enum ParamType input)
     }
 }
 
-char* instruction_type_tostring(enum InstructionType input)
+char* instruction_type_tostring(InstructionType input)
 {
     switch (input)
     {
@@ -84,7 +84,7 @@ char* instruction_type_tostring(enum InstructionType input)
     }
 }
 
-enum InstructionType instruction_type_fromstring(char* input)
+InstructionType instruction_type_fromstring(char* input)
 {
     if (strcmp(input, "let") == 0)
         return INST_LET;

@@ -7,22 +7,22 @@ typedef enum { false, true } bool;
 bool starts_with(const char* haystack, const char* needle);
 int exponent(int value, int power);
 
-enum VarType
+typedef enum ValueTypes
 {
     TYPE_INT
 ,   TYPE_FLOAT
 ,   TYPE_LONG_DOUBLE
 ,   TYPE_STRING
-};
+} ValueType;
 
-enum ParamType
+typedef enum ParamTypes
 {
     PARAM_LABEL
 ,   PARAM_LITERAL
 ,   PARAM_PATTERN
-};
+} ParamType;
 
-enum InstructionType
+typedef enum InstructionTypes
 {
     INST_LET
 ,   INST_ADD
@@ -34,25 +34,25 @@ enum InstructionType
 ,   INST_RET
 ,   INST_PRINT
 ,   INST_NEXT
-};
+} InstructionType;
 
-enum Patterns
+typedef enum PatternValues
 {
     PTRN_LOCALS = 1
 ,   PTRN_CONSTANTS = 2
-};
+} Patterns;
 
-char* var_type_tostring(enum VarType input);
-enum VarType var_type_fromstring(char* input);
+char* var_type_tostring(ValueType input);
+ValueType var_type_fromstring(char* input);
 
-char* param_type_tostring(enum ParamType input);
+char* param_type_tostring(ParamType input);
 
-char* instruction_type_tostring(enum InstructionType input);
-enum InstructionType instruction_type_fromstring(char* input);
+char* instruction_type_tostring(InstructionType input);
+InstructionType instruction_type_fromstring(char* input);
 
 struct Value
 {
-    enum VarType type;
+    ValueType type;
     void* data;
     int size;
 };
@@ -106,7 +106,7 @@ struct Local
 
 struct Param
 {
-    enum ParamType type;
+    ParamType type;
     struct Value* value;
 };
 
@@ -114,7 +114,7 @@ void param_tostring(struct Param* p, char* buf, int n);
 
 struct Instruction
 {
-    enum InstructionType type;
+    InstructionType type;
     struct Param** params;
     int param_count;
     int pattern_depth;
