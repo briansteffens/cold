@@ -4,7 +4,6 @@
 
 typedef enum { false, true } bool;
 
-void print_trace();
 bool starts_with(const char* haystack, const char* needle);
 int exponent(int value, int power);
 
@@ -58,6 +57,37 @@ struct Value
     int size;
 };
 
+struct Context
+{
+    char** input_names;
+    int input_count;
+
+    struct Case* cases;
+    int case_count;
+
+    struct Instruction** solution_inst;
+    int solution_inst_count;
+
+    struct Value precision;
+
+    int depth;
+
+    struct Pattern** patterns;
+    int pattern_count;
+    bool** pattern_mask;
+
+    struct Value* constants;
+    int constant_count;
+
+    char* generated_programs_filename;
+    unsigned long* programs_completed;
+
+    bool print_solutions;
+    bool find_all_solutions;
+
+    char* solution_fn;
+};
+
 void value_tostring(struct Value* val, char* buf, int n);
 void value_set_string(struct Value* value, char* val);
 void value_set_int(struct Value* value, int val);
@@ -65,6 +95,7 @@ void value_set_float(struct Value* value, float val);
 void value_set_long_double(struct Value* value, long double val);
 void value_set_from_string(struct Value* value, char* input);
 struct Value* value_clone(const struct Value* src);
+bool compare(struct Context* ctx, struct Value* left, struct Value* right);
 void value_free(struct Value* value);
 
 struct Local
@@ -128,37 +159,6 @@ struct Pattern
     int inst_count;
 };
 
-struct Context
-{
-    char** input_names;
-    int input_count;
-
-    struct Case* cases;
-    int case_count;
-
-    struct Instruction** solution_inst;
-    int solution_inst_count;
-
-    struct Value precision;
-
-    int depth;
-
-    struct Pattern** patterns;
-    int pattern_count;
-    bool** pattern_mask;
-
-    struct Value* constants;
-    int constant_count;
-
-    char* generated_programs_filename;
-    unsigned long* programs_completed;
-
-    bool print_solutions;
-    bool find_all_solutions;
-
-    char* solution_fn;
-};
-
 struct Function
 {
     char* name;
@@ -179,3 +179,11 @@ struct Assembly
 };
 
 void free_assembly(struct Assembly* assembly);
+
+void free_pattern(struct Pattern* pattern);
+
+void local_free(struct Local* local);
+
+void free_state(struct State* state);
+
+void print_program(struct Instruction** inst, int count, bool line_nums);

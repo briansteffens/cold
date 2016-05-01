@@ -10,3 +10,4 @@ void solve(const char* solver_file, const char* output_dir, int threads,
         bool print_solutions, bool find_all_solutions, bool output_generated);
 void parse_solver_file(struct Context* ctx, const char* solver_file);
 void permute(int result[], int max_depth, int patterns, int target);
+struct State* setup_state(struct Context* ctx, int case_index);

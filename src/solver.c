@@ -8,6 +8,7 @@
 #include <sys/stat.h>
 
 #include "cold.h"
+#include "general.h"
 #include "interpreter.h"
 #include "compiler.h"
 #include "permute.h"
@@ -116,6 +117,30 @@ void permute(int result[], int max_depth, int patterns, int target)
         level_done:
         inverse_depth++;
     }
+}
+
+// Given a [Context] and a test case, construct a State representing it
+struct State* setup_state(struct Context* ctx, int case_index)
+{
+    struct State* ret = malloc(1 * sizeof(struct State));
+
+    ret->local_count = ctx->input_count;
+    ret->locals = malloc(ret->local_count * sizeof(struct Local*));
+    ret->locals_owned = malloc(ret->local_count * sizeof(bool));
+
+    for (int i = 0; i < ctx->input_count; i++)
+    {
+        ret->locals[i] = malloc(sizeof(struct Local));
+        ret->locals[i]->name = strdup(ctx->input_names[i]);
+        ret->locals[i]->value =
+            value_clone(&ctx->cases[case_index].input_values[i]);
+
+        ret->locals_owned[i] = true;
+    }
+
+    ret->ret = NULL;
+
+    return ret;
 }
 
 // Clone an interpreter state, leaving pointers to the [orig] state's locals
@@ -566,18 +591,6 @@ void step(struct Context* ctx, struct State** states, int state_count)
             break;
         }
     }
-}
-
-void free_pattern(struct Pattern* pattern)
-{
-    for (int i = 0; i < pattern->inst_count; i++)
-    {
-        instruction_free(pattern->insts[i]);
-        free(pattern->insts[i]);
-    }
-
-    free(pattern->insts);
-    free(pattern);
 }
 
 void parse_solver_file(struct Context* ctx, const char* solver_file)

@@ -5,8 +5,6 @@
 
 #include "cold.h"
 
-const bool DUMP_LOCALS = false;
-
 // Find the ordinal of a local by [name] in state->locals
 int find_local(struct State* state, const char* name)
 {
@@ -24,31 +22,6 @@ struct Local* get_local(struct State* state, const char* name)
     return state->locals[find_local(state, name)];
 }
 
-// Free a local and its associated value
-void local_free(struct Local* local)
-{
-    value_free(local->value);
-    free(local->name);
-    free(local);
-}
-
-// Print a Value and its associated type information for debugging purposes
-void value_print(const struct Value* value)
-{
-    switch (value->type)
-    {
-    case TYPE_STRING:
-        printf("STRING: \"%s\"\n", value->data);
-        break;
-    case TYPE_INT:
-        printf("INT: \"%d\"\n", *((int*)value->data));
-        break;
-    default:
-        printf("UNRECOGNIZED TYPE");
-        break;
-    }
-}
-
 // Resolve an instruction parameter (label/literal) to its actual value
 struct Value* resolve(struct State* state, struct Param* param)
 {
@@ -61,71 +34,6 @@ struct Value* resolve(struct State* state, struct Param* param)
     default:
         printf("Unrecognized param type: %d\n", param->type);
         exit(0);
-    }
-}
-
-// Compare two values for value-based equality
-bool compare(struct Context* ctx, struct Value* left, struct Value* right)
-{
-    if (left->type == TYPE_INT && right->type == TYPE_INT)
-    {
-        return *((int*)left->data) == *((int*)right->data);
-    }
-    else if (left->type == TYPE_FLOAT && right->type == TYPE_FLOAT &&
-             ctx->precision.type == TYPE_FLOAT)
-    {
-        float f_left = *((float*)left->data);
-        float f_right = *((float*)right->data);
-        float f_precision = *((float*)ctx->precision.data);
-        return f_left >= f_right-f_precision && f_left <= f_right+f_precision;
-    }
-    else if (left->type == TYPE_LONG_DOUBLE &&
-             right->type == TYPE_LONG_DOUBLE &&
-             ctx->precision.type == TYPE_LONG_DOUBLE)
-    {
-        long double f_left = *((long double*)left->data);
-        long double f_right = *((long double*)right->data);
-        long double f_precision = *((long double*)ctx->precision.data);
-        return fabsl(f_left - f_right) <= f_precision;
-    }
-    else
-    {
-        printf("compare() can't support these types: %d == %d\n",
-            left->type, right->type);
-        char buf[255];
-        value_tostring(left, buf, 255);
-        printf("\tleft: %s\n", buf);
-        value_tostring(right, buf, 255);
-        printf("\tright: %s\n", buf);
-        exit(0);
-    }
-}
-
-// Print out all locals in a given [state] for debugging purposes
-void dump_locals(struct State* state)
-{
-    for (int i = 0; i < state->local_count; i++)
-        printf("LOCAL %s = %d\n", state->locals[i]->name,
-               *((int*)state->locals[i]->value->data));
-}
-
-// Print out a list of instructions for debugging purposes
-void print_program(struct Instruction** inst, int count, bool line_nums)
-{
-    const int BUF_LEN = 255;
-    char buf[BUF_LEN];
-
-    for (int i = 0; i < count; i++)
-    {
-        instruction_tostring(inst[i], buf, BUF_LEN);
-        if (line_nums)
-        {
-            printf("%d %s\n", i, buf);
-        }
-        else
-        {
-            printf("%s\n", buf);
-        }
     }
 }
 
@@ -307,59 +215,5 @@ void interpret(struct State* state)
         exit(0);
     }
 
-    if (DUMP_LOCALS)
-    {
-        dump_locals(state);
-        printf("\n");
-    }
-
     state->inst_ptr++;
-}
-
-void free_state(struct State* state)
-{
-    for (int i = 0; i < state->instruction_count; i++)
-    {
-        if (state->instructions_owned[i])
-        {
-            instruction_free(state->instructions[i]);
-            free(state->instructions[i]);
-        }
-    }
-
-    free(state->instructions);
-    free(state->instructions_owned);
-
-    for (int i = 0; i < state->local_count; i++)
-        if (state->locals_owned[i])
-            local_free(state->locals[i]);
-
-    free(state->locals);
-    free(state->locals_owned);
-
-    free(state);
-}
-
-// Given a [Context] and a test case, construct a State representing it
-struct State* setup_state(struct Context* ctx, int case_index)
-{
-    struct State* ret = malloc(1 * sizeof(struct State));
-
-    ret->local_count = ctx->input_count;
-    ret->locals = malloc(ret->local_count * sizeof(struct Local*));
-    ret->locals_owned = malloc(ret->local_count * sizeof(bool));
-
-    for (int i = 0; i < ctx->input_count; i++)
-    {
-        ret->locals[i] = malloc(sizeof(struct Local));
-        ret->locals[i]->name = strdup(ctx->input_names[i]);
-        ret->locals[i]->value =
-            value_clone(&ctx->cases[case_index].input_values[i]);
-
-        ret->locals_owned[i] = true;
-    }
-
-    ret->ret = NULL;
-
-    return ret;
 }
