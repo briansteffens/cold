@@ -4,17 +4,16 @@
 #include "permute.h"
 
 // Information about a permutation of pattern parameters
-struct PermuteParamsInfo
+typedef struct PermuteParamsInfo
 {
     int param_count;
-    struct Param** pattern_params;
+    Param** pattern_params;
     int* permutation_counts;
     int all_count;
-};
+} PermuteParamsInfo;
 
 // Count all possible substitutions for a param pattern
-int count_param_substitutions(struct Context* ctx, struct State* state,
-    struct Param* pattern)
+int count_param_substitutions(Context* ctx, State* state, Param* pattern)
 {
     int flags = *((int*)pattern->value->data);
 
@@ -38,17 +37,17 @@ int count_param_substitutions(struct Context* ctx, struct State* state,
 // and the result of count_param_substitutions() for the same [param].
 //
 // The return value must be freed by the caller.
-struct Param* permute_param(struct Context* ctx, struct State* state,
-    struct Param* param, int permutation_index)
+Param* permute_param(Context* ctx, State* state, Param* param,
+        int permutation_index)
 {
-    struct Param* ret = malloc(sizeof(struct Param));
+    Param* ret = malloc(sizeof(Param));
     int flags = *((int*)param->value->data);
 
     if (flags & PTRN_LOCALS)
     {
         if (permutation_index < state->local_count)
         {
-            ret->value = malloc(sizeof(struct Value));
+            ret->value = malloc(sizeof(Value));
             ret->type = PARAM_LABEL;
             value_set_string(ret->value,
                     state->locals[permutation_index]->name);
@@ -78,8 +77,8 @@ struct Param* permute_param(struct Context* ctx, struct State* state,
 //
 // info->pattern_params and info->permutation_counts must be freed by the
 // caller.
-void permute_params_info(struct Context* ctx, struct State* state,
-        struct Instruction* instruction, struct PermuteParamsInfo* info)
+void permute_params_info(Context* ctx, State* state, Instruction* instruction,
+        PermuteParamsInfo* info)
 {
     info->param_count = 0;
     info->pattern_params = malloc(0);
@@ -97,7 +96,7 @@ void permute_params_info(struct Context* ctx, struct State* state,
 
         // Add to the list of pattern params being permuted
         info->pattern_params = realloc(info->pattern_params,
-                info->param_count * sizeof(struct Param*));
+                info->param_count * sizeof(Param*));
         info->pattern_params[info->param_count - 1] = instruction->params[i];
 
         // Store the number of permutations possible for this param
@@ -116,7 +115,7 @@ void permute_params_info(struct Context* ctx, struct State* state,
 //
 // [all_ptr] will store the output and should be a 2-dimensional array of size
 // [info->all_count][info->param_count].
-void permute_params_all(struct PermuteParamsInfo* info, int* all_ptr)
+void permute_params_all(PermuteParamsInfo* info, int* all_ptr)
 {
     // 2d array from pointer
     int(* all)[info->param_count] = (int(*)[info->param_count])all_ptr;
@@ -156,8 +155,8 @@ void permute_params_all(struct PermuteParamsInfo* info, int* all_ptr)
 //
 // [all_ptr] should be a 2d array of size [info->all_count][info->param_count].
 // [out_mask] should be an array of size [info->all_count].
-void unique_mask(struct PermuteParamsInfo* info,
-        InstructionType instruction_type, int* all_ptr, bool* out_mask)
+void unique_mask(PermuteParamsInfo* info, InstructionType instruction_type,
+        int* all_ptr, bool* out_mask)
 {
     // 2d array from pointer
     int(* all)[info->param_count] = (int(*)[info->param_count])all_ptr;
@@ -209,11 +208,11 @@ void unique_mask(struct PermuteParamsInfo* info,
 // Compute all permutations of pattern params in a given [instruction].
 //
 // The return value must be freed by the caller.
-struct Param*** permute_params(struct Context* ctx, struct State* state,
-    struct Instruction* instruction, int* out_permutation_count)
+Param*** permute_params(Context* ctx, State* state, Instruction* instruction,
+        int* out_permutation_count)
 {
     // Get some general information about the permutation operation
-    struct PermuteParamsInfo info;
+    PermuteParamsInfo info;
     permute_params_info(ctx, state, instruction, &info);
 
     // Calculate all possible permutations
@@ -236,7 +235,7 @@ struct Param*** permute_params(struct Context* ctx, struct State* state,
     }
 
     // Generate output
-    struct Param*** ret = malloc(ret_count * sizeof(struct Param**));
+    Param*** ret = malloc(ret_count * sizeof(Param**));
 
     int ret_i = 0;
 
@@ -248,7 +247,7 @@ struct Param*** permute_params(struct Context* ctx, struct State* state,
             continue;
         }
 
-        ret[ret_i] = malloc(info.param_count * sizeof(struct Param*));
+        ret[ret_i] = malloc(info.param_count * sizeof(Param*));
 
         for (int p = 0; p < info.param_count; p++)
         {
@@ -271,17 +270,15 @@ struct Param*** permute_params(struct Context* ctx, struct State* state,
 // Calculate all possible permutations of the given [instruction].
 //
 // The return value must be freed by the caller.
-struct Instruction** permute_instruction(struct Context* ctx,
-    struct State* state, struct Instruction* instruction,
-    int* instruction_count)
+Instruction** permute_instruction(Context* ctx, State* state,
+        Instruction* instruction, int* instruction_count)
 {
     // Get all param permutations
     int permutation_count = 0;
-    struct Param*** permutations = permute_params(ctx, state, instruction,
+    Param*** permutations = permute_params(ctx, state, instruction,
             &permutation_count);
 
-    struct Instruction** ret = malloc(
-            permutation_count * sizeof(struct Instruction*));
+    Instruction** ret = malloc(permutation_count * sizeof(Instruction*));
 
     // For each param permutation, clone the instruction and replace the
     // pattern params with the permutation values

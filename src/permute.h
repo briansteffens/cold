@@ -1,3 +1,2 @@
-struct Instruction** permute_instruction(struct Context* ctx,
-    struct State* state, struct Instruction* instruction,
-    int* instruction_count);
+Instruction** permute_instruction(Context* ctx, State* state,
+        Instruction* instruction, int* instruction_count);

@@ -113,7 +113,7 @@ InstructionType instruction_type_fromstring(char* input)
     }
 }
 
-void value_set_int(struct Value* value, int val)
+void value_set_int(Value* value, int val)
 {
     value->type = TYPE_INT;
     value->size = sizeof(int);
@@ -121,7 +121,7 @@ void value_set_int(struct Value* value, int val)
     *((int*)value->data) = val;
 }
 
-void value_set_float(struct Value* value, float val)
+void value_set_float(Value* value, float val)
 {
     value->type = TYPE_FLOAT;
     value->size = sizeof(float);
@@ -129,7 +129,7 @@ void value_set_float(struct Value* value, float val)
     *((float*)value->data) = val;
 }
 
-void value_set_long_double(struct Value* value, long double val)
+void value_set_long_double(Value* value, long double val)
 {
     value->type = TYPE_LONG_DOUBLE;
     value->size = sizeof(long double);
@@ -137,7 +137,7 @@ void value_set_long_double(struct Value* value, long double val)
     *((long double*)value->data) = val;
 }
 
-void value_set_string(struct Value* value, char* val)
+void value_set_string(Value* value, char* val)
 {
     value->type = TYPE_STRING;
     value->size = strlen(val) + 1;
@@ -149,7 +149,7 @@ void value_set_string(struct Value* value, char* val)
 //  Example: i123    -> int 123
 //  Example: f123.45 -> float 123.45
 //  Example: f123e2  -> float 12300.0
-void value_set_from_string(struct Value* value, char* input)
+void value_set_from_string(Value* value, char* input)
 {
     const char type = input[0];
     const char* val = input + 1;
@@ -204,7 +204,7 @@ void value_set_from_string(struct Value* value, char* input)
     }
 }
 
-void value_tostring(struct Value* val, char* buf, int n)
+void value_tostring(Value* val, char* buf, int n)
 {
     switch (val->type)
     {
@@ -227,9 +227,9 @@ void value_tostring(struct Value* val, char* buf, int n)
 }
 
 // Deep copy a Value (including the data itself)
-struct Value* value_clone(const struct Value* src)
+Value* value_clone(const Value* src)
 {
-    struct Value* ret = malloc(sizeof(struct Value));
+    Value* ret = malloc(sizeof(Value));
 
     ret->type = src->type;
     ret->size = src->size;
@@ -240,7 +240,7 @@ struct Value* value_clone(const struct Value* src)
 }
 
 // Compare two values for value-based equality
-bool compare(struct Context* ctx, struct Value* left, struct Value* right)
+bool compare(Context* ctx, Value* left, Value* right)
 {
     if (left->type == TYPE_INT && right->type == TYPE_INT)
     {
@@ -277,25 +277,25 @@ bool compare(struct Context* ctx, struct Value* left, struct Value* right)
 }
 
 // Free a Value and its associated data
-void value_free(struct Value* value)
+void value_free(Value* value)
 {
     free(value->data);
     free(value);
 }
 
-void params_allocate(struct Instruction* inst, int param_count)
+void params_allocate(Instruction* inst, int param_count)
 {
-    inst->params = malloc(param_count * sizeof(struct Param*));
+    inst->params = malloc(param_count * sizeof(Param*));
     inst->param_count = param_count;
 
     for (int i = 0; i < param_count; i++)
     {
-        inst->params[i] = malloc(sizeof(struct Param));
-        inst->params[i]->value = malloc(sizeof(struct Value));
+        inst->params[i] = malloc(sizeof(Param));
+        inst->params[i]->value = malloc(sizeof(Value));
     }
 }
 
-void param_tostring(struct Param* p, char* buf, int n)
+void param_tostring(Param* p, char* buf, int n)
 {
     char prefix;
 
@@ -335,7 +335,7 @@ void param_tostring(struct Param* p, char* buf, int n)
     snprintf(buf, n, "%c%s", prefix, val);
 }
 
-void instruction_tostring(struct Instruction* input, char* buf, int n)
+void instruction_tostring(Instruction* input, char* buf, int n)
 {
     snprintf(buf, n, "%s ", instruction_type_tostring(input->type));
 
@@ -351,7 +351,7 @@ void instruction_tostring(struct Instruction* input, char* buf, int n)
 }
 
 // Free an instruction and its associated paramaters and their values
-void instruction_free(struct Instruction* inst)
+void instruction_free(Instruction* inst)
 {
     // TODO: free the actual inst here?
     for (int i = 0; i < inst->param_count; i++)
@@ -366,17 +366,17 @@ void instruction_free(struct Instruction* inst)
 // Clone an instruction.
 //
 // The return value must be freed by the caller.
-struct Instruction* instruction_clone(struct Instruction* orig)
+Instruction* instruction_clone(Instruction* orig)
 {
-    struct Instruction* ret = malloc(sizeof(struct Instruction));
+    Instruction* ret = malloc(sizeof(Instruction));
 
     ret->type = orig->type;
     ret->param_count = orig->param_count;
-    ret->params = malloc(ret->param_count * sizeof(struct Param*));
+    ret->params = malloc(ret->param_count * sizeof(Param*));
 
     for (int i = 0; i < ret->param_count; i++)
     {
-        ret->params[i] = malloc(sizeof(struct Param));
+        ret->params[i] = malloc(sizeof(Param));
 
         ret->params[i]->type = orig->params[i]->type;
         ret->params[i]->value = value_clone(orig->params[i]->value);
@@ -388,7 +388,7 @@ struct Instruction* instruction_clone(struct Instruction* orig)
     return ret;
 }
 
-void free_function(struct Function* func)
+void free_function(Function* func)
 {
     free(func->name);
 
@@ -407,7 +407,7 @@ void free_function(struct Function* func)
     free(func->insts);
 }
 
-void free_assembly(struct Assembly* assembly)
+void free_assembly(Assembly* assembly)
 {
     for (int i = 0; i < assembly->instruction_count; i++)
     {
@@ -417,7 +417,7 @@ void free_assembly(struct Assembly* assembly)
     free(assembly->instructions);
 }
 
-void free_pattern(struct Pattern* pattern)
+void free_pattern(Pattern* pattern)
 {
     for (int i = 0; i < pattern->inst_count; i++)
     {
@@ -430,14 +430,14 @@ void free_pattern(struct Pattern* pattern)
 }
 
 // Free a local and its associated value
-void local_free(struct Local* local)
+void local_free(Local* local)
 {
     value_free(local->value);
     free(local->name);
     free(local);
 }
 
-void free_state(struct State* state)
+void free_state(State* state)
 {
     for (int i = 0; i < state->instruction_count; i++)
     {
@@ -462,7 +462,7 @@ void free_state(struct State* state)
 }
 
 // Print out a list of instructions for debugging purposes
-void print_program(struct Instruction** inst, int count, bool line_nums)
+void print_program(Instruction** inst, int count, bool line_nums)
 {
     const int BUF_LEN = 255;
     char buf[BUF_LEN];

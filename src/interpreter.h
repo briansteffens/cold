@@ -1,9 +1,9 @@
-struct Value* value_clone(const struct Value* src);
+Value* value_clone(const Value* src);
 
-struct State* setup_state(struct Context* ctx, int case_index);
-void free_state(struct State* state);
+State* setup_state(Context* ctx, int case_index);
+void free_state(State* state);
 
-void print_program(struct Instruction** inst, int count, bool line_nums);
+void print_program(Instruction** inst, int count, bool line_nums);
 
-bool compare(struct Context* ctx, struct Value* left, struct Value* right);
-void interpret(struct State* state);
+bool compare(Context* ctx, Value* left, Value* right);
+void interpret(State* state);

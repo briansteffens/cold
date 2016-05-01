@@ -6,7 +6,7 @@
 #include "general.h"
 #include "compiler.h"
 
-void parse_param(struct Param* param, char* src)
+void parse_param(Param* param, char* src)
 {
     if (src[0] == 'i')
     {
@@ -61,7 +61,7 @@ void parse_param(struct Param* param, char* src)
     }
 }
 
-void parse_instruction(struct Instruction* inst, char** parts, int part_count)
+void parse_instruction(Instruction* inst, char** parts, int part_count)
 {
     inst->type = instruction_type_fromstring(parts[0]);
 
@@ -73,11 +73,11 @@ void parse_instruction(struct Instruction* inst, char** parts, int part_count)
     }
 }
 
-struct Function** parse(char** lines, int line_count, int* out_count)
+Function** parse(char** lines, int line_count, int* out_count)
 {
     *out_count = 0;
-    struct Function** ret = malloc(0);
-    struct Function* cur = NULL;
+    Function** ret = malloc(0);
+    Function* cur = NULL;
 
     for (int i = 0; i < line_count; i++)
     {
@@ -87,8 +87,8 @@ struct Function** parse(char** lines, int line_count, int* out_count)
         if (strcmp(parts[0], "def") == 0)
         {
             (*out_count)++;
-            ret = realloc(ret, *out_count * sizeof(struct Function*));
-            cur = ret[*out_count - 1] = malloc(sizeof(struct Function));
+            ret = realloc(ret, *out_count * sizeof(Function*));
+            cur = ret[*out_count - 1] = malloc(sizeof(Function));
 
             cur->name = strdup(parts[1]);
 
@@ -101,13 +101,13 @@ struct Function** parse(char** lines, int line_count, int* out_count)
             }
 
             cur->inst_count = 0;
-            cur->insts = malloc(cur->inst_count * sizeof(struct Instruction));
+            cur->insts = malloc(cur->inst_count * sizeof(Instruction));
         }
         else
         {
             cur->inst_count++;
             cur->insts = realloc(cur->insts,
-                cur->inst_count * sizeof(struct Instruction));
+                cur->inst_count * sizeof(Instruction));
 
             parse_instruction(&cur->insts[cur->inst_count - 1], parts,
                               part_count);
@@ -128,7 +128,7 @@ struct Function** parse(char** lines, int line_count, int* out_count)
  *
  *  The array is created with malloc so must be freed by the caller.
  */
-struct Function** parse_file(const char* filename, int* function_count)
+Function** parse_file(const char* filename, int* function_count)
 {
     FILE* file = fopen(filename, "r");
 
@@ -143,7 +143,7 @@ struct Function** parse_file(const char* filename, int* function_count)
 
     fclose(file);
 
-    struct Function** ret = parse(lines, line_count, function_count);
+    Function** ret = parse(lines, line_count, function_count);
 
     for (int i = 0; i < line_count; i++)
     {

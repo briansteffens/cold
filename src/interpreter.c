@@ -6,7 +6,7 @@
 #include "cold.h"
 
 // Find the ordinal of a local by [name] in state->locals
-int find_local(struct State* state, const char* name)
+int find_local(State* state, const char* name)
 {
     for (int i = 0; i < state->local_count; i++)
         if (strcmp(state->locals[i]->name, name) == 0)
@@ -17,13 +17,13 @@ int find_local(struct State* state, const char* name)
 }
 
 // Find a local struct by [name] in [state]
-struct Local* get_local(struct State* state, const char* name)
+Local* get_local(State* state, const char* name)
 {
     return state->locals[find_local(state, name)];
 }
 
 // Resolve an instruction parameter (label/literal) to its actual value
-struct Value* resolve(struct State* state, struct Param* param)
+Value* resolve(State* state, Param* param)
 {
     switch (param->type)
     {
@@ -39,24 +39,24 @@ struct Value* resolve(struct State* state, struct Param* param)
 
 // Interpret the current line in a given [state] and advance the instruction
 // pointer if necessary.
-void interpret(struct State* state)
+void interpret(State* state)
 {
-    struct Instruction* inst = state->instructions[state->inst_ptr];
+    Instruction* inst = state->instructions[state->inst_ptr];
 
     switch (inst->type)
     {
     case INST_LET:
         state->local_count++;
         state->locals = realloc(state->locals,
-            state->local_count * sizeof(struct Local*));
+            state->local_count * sizeof(Local*));
         state->locals_owned = realloc(state->locals_owned,
             state->local_count * sizeof(bool));
 
-        struct Local* local = malloc(sizeof(struct Local));
+        Local* local = malloc(sizeof(Local));
 
         local->name = strdup(inst->params[0]->value->data);
 
-        struct Value* new_value = resolve(state, inst->params[1]);
+        Value* new_value = resolve(state, inst->params[1]);
         local->value = value_clone(new_value);
 
         state->locals[state->local_count - 1] = local;
@@ -69,12 +69,12 @@ void interpret(struct State* state)
     case INST_EXP:;
         int target = find_local(state, inst->params[0]->value->data);
 
-        struct Value* left = resolve(state, inst->params[1]);
-        struct Value* right = resolve(state, inst->params[2]);
+        Value* left = resolve(state, inst->params[1]);
+        Value* right = resolve(state, inst->params[2]);
 
-        struct Local* new_local = malloc(sizeof(struct Local));
+        Local* new_local = malloc(sizeof(Local));
         new_local->name = strdup(state->locals[target]->name);
-        new_local->value = malloc(sizeof(struct Value));
+        new_local->value = malloc(sizeof(Value));
 
         if (left->type == TYPE_INT && right->type == TYPE_INT &&
             state->locals[target]->value->type == TYPE_INT)
@@ -176,8 +176,8 @@ void interpret(struct State* state)
         state->inst_ptr = *((int*)inst->params[0]->value->data);
         return;
     case INST_CMP:;
-        struct Value* cmp_left = resolve(state, inst->params[0]);
-        struct Value* cmp_right = resolve(state, inst->params[1]);
+        Value* cmp_left = resolve(state, inst->params[0]);
+        Value* cmp_right = resolve(state, inst->params[1]);
 
         if (cmp_left->type != TYPE_INT || cmp_right->type != TYPE_INT)
         {
@@ -193,7 +193,7 @@ void interpret(struct State* state)
 
         break;
     case INST_PRINT:;
-        struct Value* print_target = resolve(state, inst->params[0]);
+        Value* print_target = resolve(state, inst->params[0]);
 
         switch (print_target->type)
         {

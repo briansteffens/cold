@@ -50,33 +50,59 @@ char* param_type_tostring(ParamType input);
 char* instruction_type_tostring(InstructionType input);
 InstructionType instruction_type_fromstring(char* input);
 
-struct Value
+typedef struct Value
 {
     ValueType type;
     void* data;
     int size;
-};
+} Value;
 
-struct Context
+typedef struct Case
+{
+    Value* input_values;
+    Value expected;
+} Case;
+
+typedef struct Param
+{
+    ParamType type;
+    Value* value;
+} Param;
+
+typedef struct Instruction
+{
+    InstructionType type;
+    Param** params;
+    int param_count;
+    int pattern_depth;
+} Instruction;
+
+typedef struct Pattern
+{
+    Instruction** insts;
+    int inst_count;
+} Pattern;
+
+typedef struct Context
 {
     char** input_names;
     int input_count;
 
-    struct Case* cases;
+    Case* cases;
     int case_count;
 
-    struct Instruction** solution_inst;
+    Instruction** solution_inst;
     int solution_inst_count;
 
-    struct Value precision;
+    Value precision;
 
     int depth;
 
-    struct Pattern** patterns;
+    Pattern** patterns;
     int pattern_count;
     bool** pattern_mask;
 
-    struct Value* constants;
+    Value* constants;
     int constant_count;
 
     char* generated_programs_filename;
@@ -86,104 +112,72 @@ struct Context
     bool find_all_solutions;
 
     char* solution_fn;
-};
+} Context;
 
-void value_tostring(struct Value* val, char* buf, int n);
-void value_set_string(struct Value* value, char* val);
-void value_set_int(struct Value* value, int val);
-void value_set_float(struct Value* value, float val);
-void value_set_long_double(struct Value* value, long double val);
-void value_set_from_string(struct Value* value, char* input);
-struct Value* value_clone(const struct Value* src);
-bool compare(struct Context* ctx, struct Value* left, struct Value* right);
-void value_free(struct Value* value);
+void value_tostring(Value* val, char* buf, int n);
+void value_set_string(Value* value, char* val);
+void value_set_int(Value* value, int val);
+void value_set_float(Value* value, float val);
+void value_set_long_double(Value* value, long double val);
+void value_set_from_string(Value* value, char* input);
+Value* value_clone(const Value* src);
+bool compare(Context* ctx, Value* left, Value* right);
+void value_free(Value* value);
 
-struct Local
+typedef struct Local
 {
     char* name;
-    struct Value* value;
-};
+    Value* value;
+} Local;
 
-struct Param
+void param_tostring(Param* p, char* buf, int n);
+
+void params_allocate(Instruction* inst, int param_count);
+
+void instruction_tostring(Instruction* input, char* buf, int n);
+void instruction_free(Instruction* inst);
+Instruction* instruction_clone(Instruction* orig);
+
+typedef struct State
 {
-    ParamType type;
-    struct Value* value;
-};
-
-void param_tostring(struct Param* p, char* buf, int n);
-
-struct Instruction
-{
-    InstructionType type;
-    struct Param** params;
-    int param_count;
-    int pattern_depth;
-};
-
-void params_allocate(struct Instruction* inst, int param_count);
-
-void instruction_tostring(struct Instruction* input, char* buf, int n);
-void instruction_free(struct Instruction* inst);
-struct Instruction* instruction_clone(struct Instruction* orig);
-
-struct State
-{
-    struct Local** locals;
+    Local** locals;
     bool* locals_owned;
     int local_count;
 
-    struct Instruction** instructions;
+    Instruction** instructions;
     bool* instructions_owned;
     int instruction_count;
 
     int inst_ptr;
 
-    struct Value* ret;
-};
+    Value* ret;
+} State;
 
-struct StateSet
-{
-    struct State** states;
-    int state_count;
-};
-
-struct Case
-{
-    struct Value* input_values;
-    struct Value expected;
-};
-
-struct Pattern
-{
-    struct Instruction** insts;
-    int inst_count;
-};
-
-struct Function
+typedef struct Function
 {
     char* name;
 
     char** args;
     int arg_count;
 
-    struct Instruction* insts;
+    Instruction* insts;
     int inst_count;
-};
+} Function;
 
-void free_function(struct Function* func);
+void free_function(Function* func);
 
-struct Assembly
+typedef struct Assembly
 {
-    struct Instruction* instructions;
+    Instruction* instructions;
     int instruction_count;
-};
+} Assembly;
 
-void free_assembly(struct Assembly* assembly);
+void free_assembly(Assembly* assembly);
 
-void free_pattern(struct Pattern* pattern);
+void free_pattern(Pattern* pattern);
 
-void local_free(struct Local* local);
+void local_free(Local* local);
 
-void free_state(struct State* state);
+void free_state(State* state);
 
-void print_program(struct Instruction** inst, int count, bool line_nums);
+void print_program(Instruction** inst, int count, bool line_nums);

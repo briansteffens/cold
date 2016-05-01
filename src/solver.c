@@ -13,7 +13,7 @@
 #include "compiler.h"
 #include "permute.h"
 
-struct SolveThreadArgs
+typedef struct SolveThreadArgs
 {
     // Input args (write by solve, read by solve_thread)
     const char* solver_file;
@@ -27,10 +27,10 @@ struct SolveThreadArgs
     bool ret_done;
     unsigned long ret_programs_completed;
     bool ret_solved;
-};
+} SolveThreadArgs;
 
 // Load a pattern file into a context
-bool add_pattern(struct Context* ctx, const char* filename)
+bool add_pattern(Context* ctx, const char* filename)
 {
     FILE* file = fopen(filename, "r");
 
@@ -47,11 +47,11 @@ bool add_pattern(struct Context* ctx, const char* filename)
 
     ctx->pattern_count++;
     ctx->patterns = realloc(ctx->patterns,
-        ctx->pattern_count * sizeof(struct Pattern*));
+        ctx->pattern_count * sizeof(Pattern*));
 
-    struct Pattern* ret = malloc(sizeof(struct Pattern));
+    Pattern* ret = malloc(sizeof(Pattern));
     ret->inst_count = 0;
-    ret->insts = malloc(ret->inst_count * sizeof(struct Instruction));
+    ret->insts = malloc(ret->inst_count * sizeof(Instruction));
 
     for (int i = 0; i < line_count; i++)
     {
@@ -60,8 +60,8 @@ bool add_pattern(struct Context* ctx, const char* filename)
 
         ret->inst_count++;
         ret->insts = realloc(ret->insts,
-            ret->inst_count * sizeof(struct Instruction*));
-        ret->insts[ret->inst_count - 1] = malloc(sizeof(struct Instruction));
+            ret->inst_count * sizeof(Instruction*));
+        ret->insts[ret->inst_count - 1] = malloc(sizeof(Instruction));
 
         parse_instruction(ret->insts[ret->inst_count - 1], parts, part_count);
 
@@ -120,17 +120,17 @@ void permute(int result[], int max_depth, int patterns, int target)
 }
 
 // Given a [Context] and a test case, construct a State representing it
-struct State* setup_state(struct Context* ctx, int case_index)
+State* setup_state(Context* ctx, int case_index)
 {
-    struct State* ret = malloc(1 * sizeof(struct State));
+    State* ret = malloc(1 * sizeof(State));
 
     ret->local_count = ctx->input_count;
-    ret->locals = malloc(ret->local_count * sizeof(struct Local*));
+    ret->locals = malloc(ret->local_count * sizeof(Local*));
     ret->locals_owned = malloc(ret->local_count * sizeof(bool));
 
     for (int i = 0; i < ctx->input_count; i++)
     {
-        ret->locals[i] = malloc(sizeof(struct Local));
+        ret->locals[i] = malloc(sizeof(Local));
         ret->locals[i]->name = strdup(ctx->input_names[i]);
         ret->locals[i]->value =
             value_clone(&ctx->cases[case_index].input_values[i]);
@@ -147,14 +147,14 @@ struct State* setup_state(struct Context* ctx, int case_index)
 // and instructions.
 //
 // The return value must be freed by the caller.
-struct State* state_fork(struct State* orig)
+State* state_fork(State* orig)
 {
-    struct State* ret = malloc(sizeof(struct State));
+    State* ret = malloc(sizeof(State));
 
     // Shallow copy locals to the new state
     ret->local_count = orig->local_count;
     ret->locals_owned = malloc(ret->local_count * sizeof(bool));
-    ret->locals = malloc(ret->local_count * sizeof(struct Local*));
+    ret->locals = malloc(ret->local_count * sizeof(Local*));
 
     for (int i = 0; i < ret->local_count; i++)
     {
@@ -165,8 +165,7 @@ struct State* state_fork(struct State* orig)
     // Shallow copy instructions to the new state
     ret->instruction_count = orig->instruction_count;
     ret->instructions_owned = malloc(ret->instruction_count * sizeof(bool));
-    ret->instructions = malloc(ret->instruction_count *
-                               sizeof(struct Instruction*));
+    ret->instructions = malloc(ret->instruction_count * sizeof(Instruction*));
 
     for (int i = 0; i < ret->instruction_count; i++)
     {
@@ -182,13 +181,13 @@ struct State* state_fork(struct State* orig)
 // Fork the state [input] for each permutation of the current instruction.
 //
 // The return value must be freed by the caller.
-struct State** vary(struct Context* ctx, struct State* input, int* state_count)
+State** vary(Context* ctx, State* input, int* state_count)
 {
     int inst_count = 0;
-    struct Instruction** insts = permute_instruction(ctx, input,
+    Instruction** insts = permute_instruction(ctx, input,
             input->instructions[input->inst_ptr], &inst_count);
 
-    struct State** ret = malloc(inst_count * sizeof(struct State*));
+    State** ret = malloc(inst_count * sizeof(State*));
 
     for (int i = 0; i < inst_count; i++)
     {
@@ -204,8 +203,7 @@ struct State** vary(struct Context* ctx, struct State* input, int* state_count)
 }
 
 // Check a state's locals for an expected value
-struct Local* expect(struct Context* ctx, struct State* state,
-    struct Value* expected)
+Local* expect(Context* ctx, State* state, Value* expected)
 {
     for (int k = 0; k < state->local_count; k++)
     {
@@ -222,12 +220,12 @@ struct Local* expect(struct Context* ctx, struct State* state,
 // by the caller) cases against a state program. If the same local in all
 // case executions finds the expected output of its case, the program contained
 // in state is considered a solution to the context being run.
-void check_cases(struct Context* ctx, struct State* base, struct Local* found)
+void check_cases(Context* ctx, State* base, Local* found)
 {
-    struct State** states = malloc(sizeof(struct State*));
+    State** states = malloc(sizeof(State*));
 
     // Setup return instruction
-    struct Instruction* ret_inst = malloc(sizeof(struct Instruction));
+    Instruction* ret_inst = malloc(sizeof(Instruction));
     ret_inst->type = INST_RET;
     params_allocate(ret_inst, 1);
     ret_inst->params[0]->type = PARAM_LABEL;
@@ -240,7 +238,7 @@ void check_cases(struct Context* ctx, struct State* base, struct Local* found)
 
         states[0]->instruction_count = base->inst_ptr + 1;
         states[0]->instructions = malloc(states[0]->instruction_count *
-            sizeof(struct Instruction*));
+            sizeof(Instruction*));
         states[0]->instructions_owned = malloc(
             states[0]->instruction_count * sizeof(bool));
 
@@ -270,7 +268,7 @@ void check_cases(struct Context* ctx, struct State* base, struct Local* found)
             // Success: copy solution program to context
             ctx->solution_inst_count = states[0]->instruction_count;
             ctx->solution_inst = malloc(
-                ctx->solution_inst_count * sizeof(struct Instruction*));
+                ctx->solution_inst_count * sizeof(Instruction*));
 
             for (int i = 0; i < ctx->solution_inst_count; i++)
                 ctx->solution_inst[i] = instruction_clone(
@@ -289,7 +287,7 @@ void check_cases(struct Context* ctx, struct State* base, struct Local* found)
 }
 
 // Remove an instruction from a state's program at the given index
-void remove_inst(struct State* state, int inst_index)
+void remove_inst(State* state, int inst_index)
 {
     // Free the instruction memory if this state owns it
     if (state->instructions_owned[inst_index])
@@ -308,27 +306,27 @@ void remove_inst(struct State* state, int inst_index)
     // Shrink the instruction set
     state->instruction_count--;
     state->instructions = realloc(state->instructions,
-        state->instruction_count * sizeof(struct Instruction*));
+        state->instruction_count * sizeof(Instruction*));
     state->instructions_owned = realloc(state->instructions_owned,
         state->instruction_count * sizeof(bool));
 }
 
 // Bounds-check a state's instruction pointer
-bool is_execution_finished(struct State* state)
+bool is_execution_finished(State* state)
 {
     return state->inst_ptr >= state->instruction_count;
 }
 
 // Insert the instructions from a code pattern into a state's instruction list
 // at the state's current instruction pointer
-void insert_pattern(struct Pattern* pattern, struct State* state, int depth)
+void insert_pattern(Pattern* pattern, State* state, int depth)
 {
     int orig_inst_count = state->instruction_count;
 
     // Allocate space in the state's instruction set for the new instructions
     state->instruction_count += pattern->inst_count;
     state->instructions = realloc(state->instructions,
-        state->instruction_count * sizeof(struct Instruction*));
+        state->instruction_count * sizeof(Instruction*));
     state->instructions_owned = realloc(state->instructions_owned,
         state->instruction_count * sizeof(bool));
 
@@ -354,15 +352,14 @@ void insert_pattern(struct Pattern* pattern, struct State* state, int depth)
 
 // Replace a "NEXT" instruction with all code patterns in the pattern mask
 // at the current depth level
-struct State** vary_patterns(struct Context* ctx, struct State* state,
-    int* patterned_count)
+State** vary_patterns(Context* ctx, State* state, int* patterned_count)
 {
     // Get the next pattern depth level
     int depth = state->instructions[state->inst_ptr]->pattern_depth + 1;
 
     // Setup output values
     *patterned_count = 0;
-    struct State** ret = malloc(0);
+    State** ret = malloc(0);
 
     // Remove the "NEXT" instruction being replaced
     remove_inst(state, state->inst_ptr);
@@ -371,7 +368,7 @@ struct State** vary_patterns(struct Context* ctx, struct State* state,
     if (depth >= ctx->depth)
     {
         *patterned_count = 1;
-        ret = realloc(ret, *patterned_count * sizeof(struct State*));
+        ret = realloc(ret, *patterned_count * sizeof(State*));
         ret[0] = state;
         return ret;
     }
@@ -383,7 +380,7 @@ struct State** vary_patterns(struct Context* ctx, struct State* state,
         *patterned_count += ctx->pattern_mask[depth][i];
     }
 
-    ret = realloc(ret, *patterned_count * sizeof(struct State*));
+    ret = realloc(ret, *patterned_count * sizeof(State*));
 
     // Fork the state for each pattern in the pattern mask at this depth and
     // insert that pattern in place of the removed "NEXT" instruction
@@ -404,8 +401,8 @@ struct State** vary_patterns(struct Context* ctx, struct State* state,
 }
 
 // Write a program to a file
-void fprint_program(FILE* file, struct Instruction** instructions,
-    int instruction_count, char** args, int arg_count)
+void fprint_program(FILE* file, Instruction** instructions,
+        int instruction_count, char** args, int arg_count)
 {
     const int BUF_LEN = 255;
     char buf[BUF_LEN];
@@ -428,7 +425,7 @@ void fprint_program(FILE* file, struct Instruction** instructions,
 }
 
 // Append a program to generated_programs file
-void fprint_generated_program(struct Context* ctx, struct State* state)
+void fprint_generated_program(Context* ctx, State* state)
 {
     FILE* file = fopen(ctx->generated_programs_filename, "a");
 
@@ -448,11 +445,11 @@ void fprint_generated_program(struct Context* ctx, struct State* state)
 }
 
 // Forward declaration because step and step_vary are mutually-dependent
-void step(struct Context* ctx, struct State** states, int state_count);
+void step(Context* ctx, State** states, int state_count);
 
 // Fork the state for each possible variance of the next instruction and
 // execute those new instructions.
-void step_vary(struct Context* ctx, struct State* state)
+void step_vary(Context* ctx, State* state)
 {
     if (is_execution_finished(state))
     {
@@ -467,7 +464,7 @@ void step_vary(struct Context* ctx, struct State* state)
     }
 
     int varied_count = 0;
-    struct State** varied = vary(ctx, state, &varied_count);
+    State** varied = vary(ctx, state, &varied_count);
 
     for (int j = 0; j < varied_count; j++)
     {
@@ -475,7 +472,7 @@ void step_vary(struct Context* ctx, struct State* state)
         interpret(varied[j]);
 
         // Check for the expected case output
-        struct Local* found = expect(ctx, varied[j], &ctx->cases[0].expected);
+        Local* found = expect(ctx, varied[j], &ctx->cases[0].expected);
 
         if (!found)
             continue;
@@ -544,7 +541,7 @@ void step_vary(struct Context* ctx, struct State* state)
 // Interpret the current line in each of the given [states], forking the
 // interpeter state as necessary for any possible permutations of the
 // current instruction.
-void step(struct Context* ctx, struct State** states, int state_count)
+void step(Context* ctx, State** states, int state_count)
 {
     for (int i = 0; i < state_count; i++)
     {
@@ -554,8 +551,8 @@ void step(struct Context* ctx, struct State** states, int state_count)
         {
             // Fork the state for each pattern in the mask
             int patterned_count = 0;
-            struct State** patterned = vary_patterns(ctx, states[i],
-                &patterned_count);
+            State** patterned = vary_patterns(ctx, states[i],
+                    &patterned_count);
 
             // Run the first line in the newly-inserted pattern in each fork
             for (int j = 0; j < patterned_count; j++)
@@ -593,7 +590,7 @@ void step(struct Context* ctx, struct State** states, int state_count)
     }
 }
 
-void parse_solver_file(struct Context* ctx, const char* solver_file)
+void parse_solver_file(Context* ctx, const char* solver_file)
 {
     // Default float precision
     value_set_float(&ctx->precision, 0.0f);
@@ -669,7 +666,7 @@ void parse_solver_file(struct Context* ctx, const char* solver_file)
         {
             ctx->constant_count++;
             ctx->constants = realloc(ctx->constants,
-                    ctx->constant_count * sizeof(struct Value));
+                    ctx->constant_count * sizeof(Value));
 
             value_set_from_string(&ctx->constants[ctx->constant_count - 1],
                     line + 9);
@@ -686,13 +683,11 @@ void parse_solver_file(struct Context* ctx, const char* solver_file)
         {
             // Allocate a new case
             ctx->case_count++;
-            ctx->cases = realloc(ctx->cases,
-                    ctx->case_count * sizeof(struct Case));
+            ctx->cases = realloc(ctx->cases, ctx->case_count * sizeof(Case));
 
-            struct Case* new_case = &ctx->cases[ctx->case_count - 1];
+            Case* new_case = &ctx->cases[ctx->case_count - 1];
 
-            new_case->input_values = malloc(
-                    ctx->input_count * sizeof(struct Value));
+            new_case->input_values = malloc(ctx->input_count * sizeof(Value));
 
             // Split parameters
             int part_count = 0;
@@ -737,9 +732,9 @@ void parse_solver_file(struct Context* ctx, const char* solver_file)
 // Solve a single assembly
 void* solve_thread(void* ptr)
 {
-    struct SolveThreadArgs* args = (struct SolveThreadArgs*)ptr;
+    SolveThreadArgs* args = (SolveThreadArgs*)ptr;
 
-    struct Context ctx;
+    Context ctx;
 
     ctx.print_solutions = args->print_solutions;
     ctx.find_all_solutions = args->find_all_solutions;
@@ -804,18 +799,18 @@ void* solve_thread(void* ptr)
     }
 
     // Setup root state
-    struct State** root = malloc(1 * sizeof(struct State*));
+    State** root = malloc(1 * sizeof(State*));
 
     root[0] = setup_state(&ctx, 0);
 
     root[0]->instruction_count = 1;
     root[0]->instructions = malloc(
-        root[0]->instruction_count * sizeof(struct Instruction*));
+        root[0]->instruction_count * sizeof(Instruction*));
     root[0]->instructions_owned = malloc(
         root[0]->instruction_count * sizeof(bool));
 
     // One "NEXT" instruction - a placeholder for code patterns
-    root[0]->instructions[0] = malloc(sizeof(struct Instruction));
+    root[0]->instructions[0] = malloc(sizeof(Instruction));
     root[0]->instructions[0]->type = INST_NEXT;
     root[0]->instructions[0]->pattern_depth = -1;
     root[0]->instructions_owned[0] = true;
@@ -882,15 +877,15 @@ void* solve_thread(void* ptr)
     return NULL;
 }
 
-struct SolveThreadInfo
+typedef struct SolveThreadInfo
 {
     pthread_t thread;
-    struct SolveThreadArgs args;
+    SolveThreadArgs args;
     bool started;
-};
+} SolveThreadInfo;
 
 // Output solver status to STDOUT
-void print_total_status(struct SolveThreadInfo info[], int threads,
+void print_total_status(SolveThreadInfo info[], int threads,
         int completed_by_old_threads, time_t program_start, bool interactive)
 {
     unsigned long total_completed = completed_by_old_threads;
@@ -928,7 +923,7 @@ void solve(const char* solver_file, const char* output_dir, int threads,
         int assembly_start, int assembly_count, bool interactive,
         bool print_solutions, bool find_all_solutions, bool output_generated)
 {
-    struct SolveThreadInfo info[threads];
+    SolveThreadInfo info[threads];
 
     for (int i = 0; i < threads; i++)
     {
@@ -940,7 +935,7 @@ void solve(const char* solver_file, const char* output_dir, int threads,
     // All assemblies
     if (assembly_start == -1)
     {
-        struct Context ctx;
+        Context ctx;
         parse_solver_file(&ctx, solver_file);
 
         assembly_start = 0;
