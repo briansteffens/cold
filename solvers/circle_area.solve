@@ -3,16 +3,16 @@
 
 depth 2
 
-precision f0.1
+precision 0.1f
 
-constant f3.14159
-constant f2.0
+constant 3.14159f
+constant 2.0f
 
 pattern mul
 pattern exp
 
 input r
 
-case f2.5 f19.635
-case f4000.0 f50265440.0
-case f0.3 f0.283
+case 2.5f 19.635f
+case f4000.0f 50265440.0f
+case 0.3f 0.283f

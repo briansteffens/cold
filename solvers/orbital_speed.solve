@@ -2,7 +2,7 @@
 
 depth 4
 
-precision 1.35E15DL
+precision 1.35e15L
 
 constant 6.67408e-11L # Gravitational constant
 constant 2e0L

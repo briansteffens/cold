@@ -3,16 +3,16 @@
 
 depth 3
 
-precision f0.1
+precision 0.1f
 
-constant f3.14159
-constant f4.0
+constant 3.14159f
+constant 4.0f
 
 pattern mul
 
 input r
 
-case f2.0 f50.27
-case f1.5 f28.27
-case f13.0 f2123.72
+case 2.0f 50.27f
+case 1.5f 28.27f
+case 13.0f 2123.72f
 

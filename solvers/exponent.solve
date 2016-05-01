@@ -7,5 +7,5 @@ pattern let
 
 input z
 
-case i2 i8
-case i3 i27
+case 2 8
+case 3 27

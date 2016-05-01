@@ -2,12 +2,12 @@
 
 depth 3
 
-constant i1
+constant 1
 
 pattern add
 pattern mul
 
 input z
 
-case i2 i7
-case i3 i9
+case 2 7
+case 3 9

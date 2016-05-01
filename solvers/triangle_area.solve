@@ -2,9 +2,9 @@
 
 depth 2
 
-constant f2.0
+constant 2.0f
 
-precision f0.1
+precision 0.1f
 
 pattern mul
 pattern div
@@ -12,5 +12,5 @@ pattern div
 input b
 input h
 
-case f5.0 f7.0 f17.5
-case f3.0 f5.0 f7.5
+case 5.0f 7.0f 17.5f
+case 3.0f 5.0f 7.5f

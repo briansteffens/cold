@@ -5,6 +5,9 @@
 
 #include "cold.h"
 
+#define MAX_VALUE_LEN 255
+#define MAX_INSTRUCTION_LEN 255
+
 char* var_type_tostring(ValueType input)
 {
     switch (input)
@@ -146,27 +149,47 @@ void value_set_string(Value* value, char* val)
 }
 
 // Set a value based on a string representation with preceding type hinting
-//  Example: i123    -> int 123
-//  Example: f123.45 -> float 123.45
-//  Example: f123e2  -> float 12300.0
+//  Example: 123     -> int 123
+//  Example: 123.45f -> float 123.45
+//  Example: 123e2f  -> float 12300.0
+//  Example: 123e2L  -> long double 12300.0
 void value_set_from_string(Value* value, char* input)
 {
-    const char type = input[0];
-    const char* val = input + 1;
+    const size_t input_len = strnlen(input, MAX_VALUE_LEN);
+    const char last_char = input[input_len - 1];
 
-    if (type == 'i')
+    // Determine type
+    ValueType type = TYPE_INT;
+
+    if (last_char == 'f')
     {
-        value_set_int(value, atoi(val));
+        type = TYPE_FLOAT;
     }
-    else if (type == 'f')
+    else if (last_char == 'L')
     {
+        type = TYPE_LONG_DOUBLE;
+    }
+
+    // Strip type hint off input
+    const int val_len = type == TYPE_INT ? MAX_VALUE_LEN : MAX_VALUE_LEN - 1;
+
+    char val[val_len];
+    strncpy(val, input, val_len);
+
+    switch (type)
+    {
+    case TYPE_INT:
+        value_set_int(value, atoi(val));
+        break;
+
+    case TYPE_FLOAT:;
         float f;
 
-        if (strchr(val, 'E'))
+        if (strchr(val, 'e'))
         {
             if (!sscanf(val, "%f", &f))
             {
-                printf("Unable to parse [%s] as scientific notation\n", val);
+                printf("Unable to parse scientific notation [%s]\n", val);
                 exit(0);
             }
         }
@@ -176,16 +199,16 @@ void value_set_from_string(Value* value, char* input)
         }
 
         value_set_float(value, f);
-    }
-    else if (type == 'D')
-    {
+        break;
+
+    case TYPE_LONG_DOUBLE:;
         long double ld;
 
-        if (strchr(val, 'E'))
+        if (strchr(val, 'e'))
         {
             if (!sscanf(val, "%Le", &ld))
             {
-                printf("Unable to parse [%s] as scientific notation\n", val);
+                printf("Unable to parse scientific notation [%s]\n", val);
                 exit(0);
             }
         }
@@ -196,9 +219,9 @@ void value_set_from_string(Value* value, char* input)
         }
 
         value_set_long_double(value, ld);
-    }
-    else
-    {
+        break;
+
+    default:
         printf("ERROR: unrecognized constant type\n");
         exit(0);
     }
@@ -267,10 +290,10 @@ bool compare(Context* ctx, Value* left, Value* right)
     {
         printf("compare() can't support these types: %d == %d\n",
             left->type, right->type);
-        char buf[255];
-        value_tostring(left, buf, 255);
+        char buf[MAX_VALUE_LEN];
+        value_tostring(left, buf, MAX_VALUE_LEN);
         printf("\tleft: %s\n", buf);
-        value_tostring(right, buf, 255);
+        value_tostring(right, buf, MAX_VALUE_LEN);
         printf("\tright: %s\n", buf);
         exit(0);
     }
@@ -297,7 +320,8 @@ void params_allocate(Instruction* inst, int param_count)
 
 void param_tostring(Param* p, char* buf, int n)
 {
-    char prefix;
+    char* prefix = "";
+    char* suffix = "";
 
     switch (p->type)
     {
@@ -305,13 +329,12 @@ void param_tostring(Param* p, char* buf, int n)
         switch (p->value->type)
         {
         case TYPE_INT:
-            prefix = 'i';
             break;
         case TYPE_FLOAT:
-            prefix = 'f';
+            suffix = "f";
             break;
         case TYPE_LONG_DOUBLE:
-            prefix = 'D';
+            suffix = "L";
             break;
         default:
             printf("Unrecognized value type %d\n", p->value->type);
@@ -319,33 +342,33 @@ void param_tostring(Param* p, char* buf, int n)
         }
         break;
     case PARAM_LABEL:
-        prefix = '$';
+        prefix = "$";
         break;
     case PARAM_PATTERN:
-        prefix = '!';
+        prefix = "!";
         break;
     default:
         printf("Unrecognized param type %d\n", p->type);
         exit(1);
     }
 
-    char val[100];
-    value_tostring(p->value, val, 100);
+    char val[MAX_VALUE_LEN];
+    value_tostring(p->value, val, MAX_VALUE_LEN);
 
-    snprintf(buf, n, "%c%s", prefix, val);
+    snprintf(buf, n, "%s%s%s", prefix, val, suffix);
 }
 
 void instruction_tostring(Instruction* input, char* buf, int n)
 {
     snprintf(buf, n, "%s ", instruction_type_tostring(input->type));
 
-    char param[100];
+    char param[MAX_VALUE_LEN];
     for (int i = 0; i < input->param_count; i++)
     {
         if (i > 0 && i < input->param_count)
             strncat(buf, " ", n - strlen(buf) - 2);
 
-        param_tostring(input->params[i], param, 100);
+        param_tostring(input->params[i], param, MAX_VALUE_LEN);
         strncat(buf, param, n - strlen(buf) - strlen(param));
     }
 }
@@ -381,8 +404,8 @@ Instruction* instruction_clone(Instruction* orig)
         ret->params[i]->type = orig->params[i]->type;
         ret->params[i]->value = value_clone(orig->params[i]->value);
 
-        char buf[255];
-        instruction_tostring(orig, buf, 255);
+        char buf[MAX_INSTRUCTION_LEN];
+        instruction_tostring(orig, buf, MAX_INSTRUCTION_LEN);
     }
 
     return ret;
@@ -465,12 +488,11 @@ void free_state(State* state)
 // Print out a list of instructions for debugging purposes
 void print_program(Instruction** inst, int count, bool line_nums)
 {
-    const int BUF_LEN = 255;
-    char buf[BUF_LEN];
+    char buf[MAX_INSTRUCTION_LEN];
 
     for (int i = 0; i < count; i++)
     {
-        instruction_tostring(inst[i], buf, BUF_LEN);
+        instruction_tostring(inst[i], buf, MAX_INSTRUCTION_LEN);
         if (line_nums)
         {
             printf("%d %s\n", i, buf);

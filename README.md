@@ -33,7 +33,7 @@ bin/cold solve solvers/emc2.solve --all
 Run a program with an input argument of 2:
 
 ```bash
-bin/cold run example/basic.cold i2
+bin/cold run example/basic.cold 2
 ```
 
 View the line-by-line debug output including variable dumps:

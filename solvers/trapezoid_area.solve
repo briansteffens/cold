@@ -2,9 +2,9 @@
 
 depth 3
 
-precision f0.1
+precision 0.1f
 
-constant f2.0
+constant 2.0f
 
 pattern add
 pattern mul
@@ -14,5 +14,5 @@ input b1
 input b2
 input h
 
-case f3.0 f4.0 f5.0 f17.5
-case f2.0 f5.0 f8.0 f28.0
+case 3.0f 4.0f 5.0f 17.5f
+case 2.0f 5.0f 8.0f 28.0f

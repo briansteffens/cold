@@ -8,28 +8,14 @@
 
 void parse_param(Param* param, char* src)
 {
-    if (src[0] == 'i')
-    {
-        param->type = PARAM_LITERAL;
-        value_set_int(param->value, atoi(src + 1));
-    }
-    else if (src[0] == 'f')
-    {
-        param->type = PARAM_LITERAL;
-        // TODO: known issue that locale setting can mess this up
-        value_set_float(param->value, strtod(src + 1, NULL));
-    }
-    else if (src[0] == 'D')
-    {
-        param->type = PARAM_LITERAL;
-        value_set_from_string(param->value, src);
-    }
-    else if (src[0] == '$')
+    const char prefix = src[0];
+
+    if (prefix == '$')
     {
         param->type = PARAM_LABEL;
         value_set_string(param->value, src + 1);
     }
-    else if (src[0] == '!')
+    else if (prefix == '!')
     {
         param->type = PARAM_PATTERN;
 
@@ -56,8 +42,8 @@ void parse_param(Param* param, char* src)
     }
     else
     {
-        printf("Literal [%s] unrecognized\n", src);
-        exit(0);
+        param->type = PARAM_LITERAL;
+        value_set_from_string(param->value, src);
     }
 }
 

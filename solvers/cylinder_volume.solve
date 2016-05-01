@@ -2,10 +2,10 @@
 
 depth 3
 
-precision f0.1
+precision 0.1f
 
-constant f3.14159
-constant f2.0
+constant 3.14159f
+constant 2.0f
 
 pattern mul
 pattern exp
@@ -13,6 +13,6 @@ pattern exp
 input r
 input h
 
-case f1.0 f3.0 f9.43
-case f2.0 f1.5 f18.85
-case f4.0 f7.5 f376.9908
+case 1.0f 3.0f 9.43f
+case 2.0f 1.5f 18.85f
+case 4.0f 7.5f 376.9908f

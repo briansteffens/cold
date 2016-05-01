@@ -1,4 +1,4 @@
 def main $x
-    let $r i2
+    let $r 2
     add $r $x $r
     ret $r

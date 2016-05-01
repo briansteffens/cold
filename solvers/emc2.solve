@@ -1,9 +1,9 @@
 # E=MC^2
 
 depth 3
-precision f10000.0
+precision 10000.0f
 
-constant f300000000.0 # Speed of light
+constant 300000000.0f # Speed of light
 
 pattern let
 pattern add
@@ -12,5 +12,5 @@ pattern mul
 input z
 
 # Expected: kg to joules conversions
-case f1.0 f90000000000000000.0
-case f86.18 f7756200000000001024.0
+case 1.0f 90000000000000000.0f
+case 86.18f 7756200000000001024.0f

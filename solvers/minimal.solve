@@ -6,5 +6,5 @@ pattern add
 
 input x
 
-case i1 i2
-case i2 i4
+case 1 2
+case 2 4
