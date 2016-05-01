@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "cold.h"
+#include "general.h"
 #include "interpreter.h"
 #include "compiler.h"
 #include "solver.h"

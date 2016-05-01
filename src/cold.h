@@ -4,9 +4,6 @@
 
 typedef enum { false, true } bool;
 
-bool starts_with(const char* haystack, const char* needle);
-int exponent(int value, int power);
-
 typedef enum ValueTypes
 {
     TYPE_INT
