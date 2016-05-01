@@ -12,13 +12,14 @@
 #include "interpreter.h"
 #include "compiler.h"
 #include "permute.h"
+#include "combiner.h"
 
 typedef struct SolveThreadArgs
 {
     // Input args (write by solve, read by solve_thread)
     const char* solver_file;
+    Combination combination;
     char* output_dir;
-    int combination;
     bool output_generated;
     bool print_solutions;
     bool find_all_solutions;
@@ -78,45 +79,6 @@ bool add_pattern(Context* ctx, const char* filename)
     ctx->patterns[ctx->pattern_count - 1] = ret;
 
     return true;
-}
-
-// Find a single permutation of source code patterns identified by [target]
-// where [target] is the index of the permutation between 0 and
-// [patterns] ^ [maxdepth].
-void permute(int result[], int max_depth, int patterns, int target)
-{
-    int total_permutations = exponent(patterns, max_depth);
-
-    int inverse_depth = 0;
-    for (int d = max_depth - 1; d >= 0; d--)
-    {
-        int repeat = 1;
-        if (inverse_depth > 0)
-        {
-            repeat = exponent(patterns, inverse_depth);
-        }
-
-        int permutation = 0;
-        while (permutation < total_permutations)
-        {
-            for (int p = 0; p < patterns; p++)
-            {
-                for (int r = 0; r < repeat; r++)
-                {
-                    if (permutation == target)
-                    {
-                        result[d] = p;
-                        goto level_done;
-                    }
-
-                    permutation++;
-                }
-            }
-        }
-
-        level_done:
-        inverse_depth++;
-    }
 }
 
 // Given a [Context] and a test case, construct a State representing it
@@ -286,118 +248,10 @@ void check_cases(Context* ctx, State* base, Local* found)
     free(states);
 }
 
-// Remove an instruction from a state's program at the given index
-void remove_inst(State* state, int inst_index)
-{
-    // Free the instruction memory if this state owns it
-    if (state->instructions_owned[inst_index])
-    {
-        instruction_free(state->instructions[inst_index]);
-        free(state->instructions[inst_index]);
-    }
-
-    // Shuffle instruction data after the deleted instruction down one
-    for (int i = inst_index; i < state->instruction_count - 1; i++)
-    {
-        state->instructions[i] = state->instructions[i + 1];
-        state->instructions_owned[i] = state->instructions_owned[i + 1];
-    }
-
-    // Shrink the instruction set
-    state->instruction_count--;
-    state->instructions = realloc(state->instructions,
-        state->instruction_count * sizeof(Instruction*));
-    state->instructions_owned = realloc(state->instructions_owned,
-        state->instruction_count * sizeof(bool));
-}
-
 // Bounds-check a state's instruction pointer
 bool is_execution_finished(State* state)
 {
     return state->inst_ptr >= state->instruction_count;
-}
-
-// Insert the instructions from a code pattern into a state's instruction list
-// at the state's current instruction pointer
-void insert_pattern(Pattern* pattern, State* state, int depth)
-{
-    int orig_inst_count = state->instruction_count;
-
-    // Allocate space in the state's instruction set for the new instructions
-    state->instruction_count += pattern->inst_count;
-    state->instructions = realloc(state->instructions,
-        state->instruction_count * sizeof(Instruction*));
-    state->instructions_owned = realloc(state->instructions_owned,
-        state->instruction_count * sizeof(bool));
-
-    // Move instructions after the insertion point to the end of the array
-    for (int i = orig_inst_count - 1; i > state->inst_ptr; i--)
-    {
-        int n = pattern->inst_count + 1;
-
-        state->instructions[n] = state->instructions[i];
-        state->instructions_owned[n] = state->instructions_owned[i];
-    }
-
-    // Copy the pattern instructions into the state
-    for (int i = 0; i < pattern->inst_count; i++)
-    {
-        int n = state->inst_ptr + i;
-
-        state->instructions[n] = instruction_clone(pattern->insts[i]);
-        state->instructions[n]->pattern_depth = depth;
-        state->instructions_owned[n] = true;
-    }
-}
-
-// Replace a "NEXT" instruction with all code patterns in the pattern mask
-// at the current depth level
-State** vary_patterns(Context* ctx, State* state, int* patterned_count)
-{
-    // Get the next pattern depth level
-    int depth = state->instructions[state->inst_ptr]->pattern_depth + 1;
-
-    // Setup output values
-    *patterned_count = 0;
-    State** ret = malloc(0);
-
-    // Remove the "NEXT" instruction being replaced
-    remove_inst(state, state->inst_ptr);
-
-    // Max depth passed, no more patterns. Return just the current state.
-    if (depth >= ctx->depth)
-    {
-        *patterned_count = 1;
-        ret = realloc(ret, *patterned_count * sizeof(State*));
-        ret[0] = state;
-        return ret;
-    }
-
-    // Set the number of state forks to the number of 'true' values in the
-    // pattern mask at this depth.
-    for (int i = 0; i < ctx->pattern_count; i++)
-    {
-        *patterned_count += ctx->pattern_mask[depth][i];
-    }
-
-    ret = realloc(ret, *patterned_count * sizeof(State*));
-
-    // Fork the state for each pattern in the pattern mask at this depth and
-    // insert that pattern in place of the removed "NEXT" instruction
-    int i = 0;
-    for (int p = 0; p < ctx->pattern_count; p++)
-    {
-        if (!ctx->pattern_mask[depth][p])
-            continue;
-
-        ret[i] = state_fork(state);
-
-        insert_pattern(ctx->patterns[p], ret[i], depth);
-
-        i++;
-    }
-
-    return ret;
 }
 
 // Write a program to a file
@@ -545,42 +399,7 @@ void step(Context* ctx, State** states, int state_count)
 {
     for (int i = 0; i < state_count; i++)
     {
-        // If the instruction to be interpreted is a "NEXT", it needs to be
-        // replaced with patterns.
-        if (states[i]->instructions[states[i]->inst_ptr]->type == INST_NEXT)
-        {
-            // Fork the state for each pattern in the mask
-            int patterned_count = 0;
-            State** patterned = vary_patterns(ctx, states[i],
-                    &patterned_count);
-
-            // Run the first line in the newly-inserted pattern in each fork
-            for (int j = 0; j < patterned_count; j++)
-            {
-                step_vary(ctx, patterned[j]);
-
-                // End execution if a solution was found
-                if (!ctx->find_all_solutions && ctx->solution_inst)
-                {
-                    break;
-                }
-            }
-
-            // Free pattern forked states
-            for (int j = 0; j < patterned_count; j++)
-            {
-                // Only free the forked state if it's actually a new fork.
-                // vary_patterns will return the passed-in state if no variance
-                // was performed, in which case this function didn't "create"
-                // the fork, so we shouldn't free it here.
-                if (patterned[j] != states[i])
-                {
-                    free_state(patterned[j]);
-                }
-            }
-
-            free(patterned);
-        }
+        step_vary(ctx, states[i]);
 
         // End execution if a solution was found
         if (!ctx->find_all_solutions && ctx->solution_inst)
@@ -768,55 +587,11 @@ void* solve_thread(void* ptr)
 
     parse_solver_file(&ctx, args->solver_file);
 
-    // Setup pattern mask
-    ctx.pattern_mask = malloc(ctx.depth * sizeof(bool*));
-
-    for (int i = 0; i < ctx.depth; i++)
-    {
-        ctx.pattern_mask[i] = malloc(ctx.pattern_count * sizeof(bool));
-
-        for (int j = 0; j < ctx.pattern_count; j++)
-        {
-            ctx.pattern_mask[i][j] = true;
-        }
-    }
-
-    // Restrict pattern mask to specified combination
-    if (args->combination >= 0)
-    {
-        int combination_patterns[ctx.depth];
-
-        permute(combination_patterns, ctx.depth, ctx.pattern_count,
-                args->combination);
-
-        for (int d = 0; d < ctx.depth; d++)
-        {
-            for (int p = 0; p < ctx.pattern_count; p++)
-            {
-                ctx.pattern_mask[d][p] = combination_patterns[d] == p;
-            }
-        }
-    }
-
     // Setup root state
     State** root = malloc(1 * sizeof(State*));
 
     root[0] = setup_state(&ctx, 0);
-
-    root[0]->instruction_count = 1;
-    root[0]->instructions = malloc(
-        root[0]->instruction_count * sizeof(Instruction*));
-    root[0]->instructions_owned = malloc(
-        root[0]->instruction_count * sizeof(bool));
-
-    // One "NEXT" instruction - a placeholder for code patterns
-    root[0]->instructions[0] = malloc(sizeof(Instruction));
-    root[0]->instructions[0]->type = INST_NEXT;
-    root[0]->instructions[0]->pattern_depth = -1;
-    root[0]->instructions_owned[0] = true;
-    params_allocate(root[0]->instructions[0], 0);
-
-    root[0]->inst_ptr = 0;
+    load_combination(root[0], &args->combination);
 
     // gogogo
     step(&ctx, root, 1);
@@ -866,12 +641,6 @@ void* solve_thread(void* ptr)
         free_pattern(ctx.patterns[i]);
     }
     free(ctx.patterns);
-
-    for (int i = 0; i < ctx.depth; i++)
-    {
-        free(ctx.pattern_mask[i]);
-    }
-    free(ctx.pattern_mask);
 
     args->ret_done = true;
     return NULL;
@@ -923,6 +692,10 @@ void solve(const char* solver_file, const char* output_dir, int threads,
         int combination_start, int combination_count, bool interactive,
         bool print_solutions, bool find_all_solutions, bool output_generated)
 {
+    // TODO: temp
+    Context ctx;
+    parse_solver_file(&ctx, solver_file);
+
     SolveThreadInfo info[threads];
 
     for (int i = 0; i < threads; i++)
@@ -942,7 +715,7 @@ void solve(const char* solver_file, const char* output_dir, int threads,
         combination_count = exponent(ctx.pattern_count, ctx.depth);
     }
 
-    int combination = combination_start;
+    int combination_index = combination_start;
 
     mkdir(output_dir, 0777);
 
@@ -969,6 +742,7 @@ void solve(const char* solver_file, const char* output_dir, int threads,
                 pthread_join(info[i].thread, NULL);
                 free(info[i].args.output_dir);
                 info[i].started = false;
+                free_combination(&info[i].args.combination);
                 info[i].args.ret_done = false;
                 completed_by_old_threads +=
                     info[i].args.ret_programs_completed;
@@ -979,7 +753,7 @@ void solve(const char* solver_file, const char* output_dir, int threads,
                 }
             }
 
-            if (combination >= combination_start + combination_count)
+            if (combination_index >= combination_start + combination_count)
             {
                 bool any_still_running = false;
 
@@ -1000,8 +774,8 @@ void solve(const char* solver_file, const char* output_dir, int threads,
                 continue;
             }
 
+            combine(&ctx, combination_index, &info[i].args.combination);
             info[i].args.solver_file = solver_file;
-            info[i].args.combination = combination;
             info[i].args.output_generated = output_generated;
             info[i].args.ret_done = false;
             info[i].args.ret_solved = false;
@@ -1010,9 +784,9 @@ void solve(const char* solver_file, const char* output_dir, int threads,
 
             info[i].args.output_dir = malloc(255 * sizeof(char));
             sprintf(info[i].args.output_dir, "%s/%d/", output_dir,
-                    combination);
+                    combination_index);
 
-            combination++;
+            combination_index++;
 
             int res = pthread_create(&info[i].thread, NULL, solve_thread,
                     (void*)&info[i].args);

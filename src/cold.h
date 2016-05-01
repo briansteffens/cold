@@ -74,7 +74,6 @@ typedef struct Instruction
     InstructionType type;
     Param** params;
     int param_count;
-    int pattern_depth;
 } Instruction;
 
 typedef struct Pattern
@@ -100,7 +99,6 @@ typedef struct Context
 
     Pattern** patterns;
     int pattern_count;
-    bool** pattern_mask;
 
     Value* constants;
     int constant_count;

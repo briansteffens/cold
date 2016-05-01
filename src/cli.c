@@ -7,6 +7,7 @@
 #include "compiler.h"
 #include "solver.h"
 #include "generator.h"
+#include "combiner.h"
 
 int usage()
 {
@@ -201,40 +202,6 @@ void handle_run(const char* filename, char** inputs, int inputs_count)
     free(functions);
 }
 
-int count_combinations(Context* ctx)
-{
-    return exponent(ctx->pattern_count, ctx->depth);
-}
-
-void generate_combination(Context* ctx, int patterns[],
-        struct Combination* combination)
-{
-    combination->instruction_count = 0;
-    combination->instructions = malloc(0);
-
-    for (int p = 0; p < ctx->depth; p++)
-    {
-        Pattern* pattern = ctx->patterns[patterns[p]];
-
-        for (int i = 0; i < pattern->inst_count; i++)
-        {
-            if (pattern->insts[i]->type == INST_NEXT)
-            {
-                continue;
-            }
-
-            combination->instructions = realloc(combination->instructions,
-                    (combination->instruction_count + 1) *
-                    sizeof(Instruction*));
-
-            combination->instructions[combination->instruction_count] =
-                    instruction_clone(pattern->insts[i]);
-
-            combination->instruction_count++;
-        }
-    }
-}
-
 void handle_combinations(int argc, char* argv[])
 {
     if (argc != 1)
@@ -247,16 +214,12 @@ void handle_combinations(int argc, char* argv[])
     parse_solver_file(&ctx, argv[0]);
 
     int combination_count = count_combinations(&ctx);
-    int patterns[ctx.depth];
-
     char buf[255];
 
     for (int i = 0; i < combination_count; i++)
     {
-        permute(patterns, ctx.depth, ctx.pattern_count, i);
-
         Combination combination;
-        generate_combination(&ctx, patterns, &combination);
+        combine(&ctx, i, &combination);
 
         printf("combination %d:\n", i);
 
@@ -265,6 +228,8 @@ void handle_combinations(int argc, char* argv[])
             instruction_tostring(combination.instructions[i], buf, 255);
             printf("  %s\n", buf);
         }
+
+        free_combination(&combination);
 
         printf("\n");
     }

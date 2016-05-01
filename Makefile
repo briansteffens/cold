@@ -1,4 +1,4 @@
-HEADERS = src/cold.h src/interpreter.h src/solver.h src/compiler.h src/generator.h src/permute.h src/general.h
+HEADERS = src/cold.h src/interpreter.h src/solver.h src/compiler.h src/generator.h src/permute.h src/general.h src/combiner.h
 
 CCFLAGS = -c
 CXXFLAGS =
@@ -33,11 +33,14 @@ generator.o: src/generator.c $(HEADERS)
 permute.o: src/permute.c $(HEADERS)
 	gcc $(CCFLAGS) src/permute.c -o obj/permute.o
 
+combiner.o: src/combiner.c $(HEADERS)
+	gcc $(CCFLAGS) src/combiner.c -o obj/combiner.o
+
 cli.o: src/cli.c $(HEADERS)
 	gcc $(CCFLAGS) src/cli.c -o obj/cli.o
 
-cli: pre-build cold.o interpreter.o solver.o compiler.o generator.o permute.o general.o cli.o
-	gcc $(CXXFLAGS) obj/compiler.o obj/interpreter.o obj/cold.o obj/solver.o obj/generator.o obj/permute.o obj/general.o obj/cli.o -lm -pthread -o bin/cold
+cli: pre-build cold.o interpreter.o solver.o compiler.o generator.o permute.o general.o cli.o combiner.o
+	gcc $(CXXFLAGS) obj/compiler.o obj/interpreter.o obj/cold.o obj/solver.o obj/generator.o obj/permute.o obj/general.o obj/cli.o obj/combiner.o -lm -pthread -o bin/cold
 
 clean:
 	rm -rf obj bin
