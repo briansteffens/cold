@@ -18,8 +18,8 @@ int usage()
 void handle_solver(int argc, char* argv[])
 {
     char* solver_file = NULL;
-    int assembly_index = -1;
-    int assembly_count = 1;
+    int combination_index = -1;
+    int combination_count = 1;
     bool output_generated = false;
     int threads = 1;
     bool interactive = true;
@@ -27,17 +27,17 @@ void handle_solver(int argc, char* argv[])
     bool print_solutions = true;
     bool find_all_solutions = false;
 
-    struct Context ctx;
+    Context ctx;
 
     for (int i = 0; i < argc; i++)
     {
-        if (starts_with(argv[i], "--assembly="))
+        if (starts_with(argv[i], "--combination="))
         {
-            assembly_index = atoi(argv[i] + 11);
+            combination_index = atoi(argv[i] + 14);
         }
-        else if (starts_with(argv[i], "--assembly-count="))
+        else if (starts_with(argv[i], "--combination-count="))
         {
-            assembly_count = atoi(argv[i] + 17);
+            combination_count = atoi(argv[i] + 20);
         }
         else if (strcmp(argv[i], "--output-all") == 0)
         {
@@ -75,9 +75,9 @@ void handle_solver(int argc, char* argv[])
         return;
     }
 
-    solve(solver_file, output_dir, threads, assembly_index, assembly_count,
-            interactive, print_solutions, find_all_solutions,
-            output_generated);
+    solve(solver_file, output_dir, threads, combination_index,
+            combination_count, interactive, print_solutions,
+            find_all_solutions, output_generated);
 }
 
 void handle_run(const char* filename, char** inputs, int inputs_count)
@@ -86,10 +86,10 @@ void handle_run(const char* filename, char** inputs, int inputs_count)
     remove(DEBUG_OUTPUT);
 
     int function_count;
-    struct Function** functions = parse_file(filename, &function_count);
+    Function** functions = parse_file(filename, &function_count);
 
     // Find the main function
-    struct Function* main_function = NULL;
+    Function* main_function = NULL;
 
     for (int i = 0; i < function_count; i++)
     {
@@ -113,16 +113,16 @@ void handle_run(const char* filename, char** inputs, int inputs_count)
         exit(0);
     }
 
-    struct State* state = malloc(sizeof(struct State));
+    State* state = malloc(sizeof(State));
 
     // Use CLI inputs as function arguments
     state->local_count = inputs_count;
-    state->locals = malloc(inputs_count * sizeof(struct Local*));
+    state->locals = malloc(inputs_count * sizeof(Local*));
     state->locals_owned = malloc(inputs_count * sizeof(bool));
 
     for (int i = 0; i < inputs_count; i++)
     {
-        state->locals[i] = malloc(sizeof(struct Local));
+        state->locals[i] = malloc(sizeof(Local));
 
         // Strip preceding $ symbol from argument name if present
         char* arg_name = main_function->args[i];
@@ -132,7 +132,7 @@ void handle_run(const char* filename, char** inputs, int inputs_count)
         }
         state->locals[i]->name = strdup(arg_name);
 
-        state->locals[i]->value = malloc(sizeof(struct Value));
+        state->locals[i]->value = malloc(sizeof(Value));
         value_set_from_string(state->locals[i]->value, inputs[i]);
 
         state->locals_owned[i] = true;
@@ -141,7 +141,7 @@ void handle_run(const char* filename, char** inputs, int inputs_count)
     // Load function instructions into the state
     state->instruction_count = main_function->inst_count;
     state->instructions = malloc(
-            state->instruction_count * sizeof(struct Instruction*));
+            state->instruction_count * sizeof(Instruction*));
     state->instructions_owned = malloc(
             state->instruction_count * sizeof(bool));
     for (int i = 0; i < state->instruction_count; i++)
@@ -201,18 +201,12 @@ void handle_run(const char* filename, char** inputs, int inputs_count)
     free(functions);
 }
 
-int count_combinations(struct Context* ctx)
+int count_combinations(Context* ctx)
 {
     return exponent(ctx->pattern_count, ctx->depth);
 }
 
-struct Combination
-{
-    struct Instruction** instructions;
-    int instruction_count;
-};
-
-void generate_combination(struct Context* ctx, int patterns[],
+void generate_combination(Context* ctx, int patterns[],
         struct Combination* combination)
 {
     combination->instruction_count = 0;
@@ -220,7 +214,7 @@ void generate_combination(struct Context* ctx, int patterns[],
 
     for (int p = 0; p < ctx->depth; p++)
     {
-        struct Pattern* pattern = ctx->patterns[patterns[p]];
+        Pattern* pattern = ctx->patterns[patterns[p]];
 
         for (int i = 0; i < pattern->inst_count; i++)
         {
@@ -231,7 +225,7 @@ void generate_combination(struct Context* ctx, int patterns[],
 
             combination->instructions = realloc(combination->instructions,
                     (combination->instruction_count + 1) *
-                    sizeof(struct Instruction*));
+                    sizeof(Instruction*));
 
             combination->instructions[combination->instruction_count] =
                     instruction_clone(pattern->insts[i]);
@@ -241,7 +235,7 @@ void generate_combination(struct Context* ctx, int patterns[],
     }
 }
 
-void handle_assemblies(int argc, char* argv[])
+void handle_combinations(int argc, char* argv[])
 {
     if (argc != 1)
     {
@@ -249,7 +243,7 @@ void handle_assemblies(int argc, char* argv[])
         return;
     }
 
-    struct Context ctx;
+    Context ctx;
     parse_solver_file(&ctx, argv[0]);
 
     int combination_count = count_combinations(&ctx);
@@ -261,10 +255,10 @@ void handle_assemblies(int argc, char* argv[])
     {
         permute(patterns, ctx.depth, ctx.pattern_count, i);
 
-        struct Combination combination;
+        Combination combination;
         generate_combination(&ctx, patterns, &combination);
 
-        printf("assembly %d:\n", i);
+        printf("combination %d:\n", i);
 
         for (int i = 0; i < combination.instruction_count; i++)
         {
@@ -291,9 +285,9 @@ int main(int argc, char* argv[])
     {
         handle_run(argv[2], argv + 3, argc - 3);
     }
-    else if (strcmp(argv[1], "assemblies") == 0)
+    else if (strcmp(argv[1], "combinations") == 0)
     {
-        handle_assemblies(argc - 2, argv + 2);
+        handle_combinations(argc - 2, argv + 2);
     }
     else
     {

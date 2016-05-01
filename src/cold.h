@@ -166,13 +166,13 @@ typedef struct Function
 
 void free_function(Function* func);
 
-typedef struct Assembly
+typedef struct Combination
 {
-    Instruction* instructions;
+    Instruction** instructions;
     int instruction_count;
-} Assembly;
+} Combination;
 
-void free_assembly(Assembly* assembly);
+void free_combination(Combination* combination);
 
 void free_pattern(Pattern* pattern);
 

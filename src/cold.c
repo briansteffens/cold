@@ -407,14 +407,15 @@ void free_function(Function* func)
     free(func->insts);
 }
 
-void free_assembly(Assembly* assembly)
+void free_combination(Combination* combination)
 {
-    for (int i = 0; i < assembly->instruction_count; i++)
+    for (int i = 0; i < combination->instruction_count; i++)
     {
-        instruction_free(&assembly->instructions[i]);
+        instruction_free(combination->instructions[i]);
+        free(combination->instructions[i]);
     }
 
-    free(assembly->instructions);
+    free(combination->instructions);
 }
 
 void free_pattern(Pattern* pattern)

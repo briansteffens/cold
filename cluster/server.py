@@ -35,8 +35,8 @@ class ServerState(object):
         self.status = 'stopped'
         self.workers = []
         self.solver = None
-        self.total_assemblies = None
-        self.assemblies_unsolved = None
+        self.total_combinations = None
+        self.combinations_unsolved = None
         self.next_unsolved_index = 0
         self.total_run = 0
         self.solutions = []
@@ -63,18 +63,18 @@ def reset(state, solver_text):
         if line.startswith('depth '):
             state.depth = int(line[6:].strip())
 
-    state.total_assemblies = len(state.patterns) ** state.depth
-    state.assemblies_unsolved = [a for a in range(state.total_assemblies)]
+    state.total_combinations = len(state.patterns) ** state.depth
+    state.combinations_unsolved = [a for a in range(state.total_combinations)]
     state.next_unsolved_index = 0
     state.total_run = 0
     state.solutions = []
 
     for worker in state.workers:
         worker['run_rate'] = None
-        worker['assemblies_completed'] = []
+        worker['combinations_completed'] = []
         worker['run_samples'] = []
-        worker['assemblies_running'] = []
-        worker['assemblies_queued'] = []
+        worker['combinations_running'] = []
+        worker['combinations_queued'] = []
         worker['programs_run'] = 0
 
 # Load the solvers from disk
@@ -161,7 +161,7 @@ def console_update():
         'programs_run': state.total_run,
         'workers': [],
         'solutions': state.solutions,
-        'unsolved': state.assemblies_unsolved,
+        'unsolved': state.combinations_unsolved,
         'solved': [],
     }
 
@@ -177,15 +177,15 @@ def console_update():
             'worker_id': w['worker_id'],
             'cores': w['cores'],
             'run_rate': w['run_rate'],
-            'assemblies_completed': len(w['assemblies_completed']),
+            'combinations_completed': len(w['combinations_completed']),
             'programs_run': w['programs_run'],
             'status': worker_status,
         })
 
         res['solved'].extend([{
-            'assembly': a['assembly'],
+            'combination': a['combination'],
             'programs_completed': a['programs_completed'],
-        } for a in w['assemblies_completed']])
+        } for a in w['combinations_completed']])
 
     return json.dumps(res)
 
@@ -207,7 +207,7 @@ def worker_status():
             'worker_id': req['worker_id'],
             'cores': req['cores'],
             'last_solver_sent': None,
-            'assemblies_completed': [],
+            'combinations_completed': [],
             'run_samples': [],
             'run_rate': None,
         }
@@ -215,37 +215,38 @@ def worker_status():
         state.workers.append(worker)
 
     worker['last_checkin'] = datetime.now()
-    worker['assemblies_running'] = req['assemblies_running']
-    worker['assemblies_queued'] = req['assemblies_queued']
+    worker['combinations_running'] = req['combinations_running']
+    worker['combinations_queued'] = req['combinations_queued']
 
     if state.status == 'running':
-        # Remove assemblies from the unsolved list if they've been completed
-        if 'assemblies_completed' in req:
-            for ac_new in req['assemblies_completed']:
+        # Remove combinations from the unsolved list if they've been completed
+        if 'combinations_completed' in req:
+            for ac_new in req['combinations_completed']:
                 found = False
 
-                for ac_old in worker['assemblies_completed']:
-                    if ac_old['assembly'] == ac_new['assembly']:
+                for ac_old in worker['combinations_completed']:
+                    if ac_old['combination'] == ac_new['combination']:
                         found = True
                         break
 
                 if not found:
-                    worker['assemblies_completed'].append(ac_new)
+                    worker['combinations_completed'].append(ac_new)
                     state.total_run += ac_new['programs_completed']
                     state.solutions.extend(ac_new['solutions'])
 
-            ac = [a['assembly'] for a in req['assemblies_completed']]
-            state.assemblies_unsolved = [a for a in state.assemblies_unsolved
-                                         if a not in ac]
+            ac = [a['combination'] for a in req['combinations_completed']]
+            state.combinations_unsolved = [
+                    a for a in state.combinations_unsolved if a not in ac]
 
     # End execution
-    if state.status != 'disarmed' and (state.assemblies_unsolved is None or
-                                       len(state.assemblies_unsolved) == 0):
+    if state.status != 'disarmed' and (state.combinations_unsolved is None or
+                                       len(state.combinations_unsolved) == 0):
         state.status = 'stopped'
 
     # Calculate run sample
     worker['programs_run'] = sum(a['programs_completed']
-        for a in worker['assemblies_completed'] + worker['assemblies_running'])
+        for a in worker['combinations_completed'] +
+                 worker['combinations_running'])
 
     worker['run_samples'].append({
         'sample': worker['programs_run'],
@@ -286,30 +287,30 @@ def worker_status():
         worker['last_solver_sent'] = state.solver
 
     if ret['status'] == 'running':
-        # Workers should have twice their number of cores in assemblies
+        # Workers should have twice their number of cores in combinations
         # running/queued at all times, unless there aren't enough unsolved
-        # assemblies left
-        current = len(worker['assemblies_running']) + \
-                  len(worker['assemblies_queued'])
+        # combinations left
+        current = len(worker['combinations_running']) + \
+                  len(worker['combinations_queued'])
 
         ideal = worker['cores'] * 2
 
-        needed = min(ideal - current, len(state.assemblies_unsolved))
+        needed = min(ideal - current, len(state.combinations_unsolved))
 
         if needed > 0:
             assigned = []
 
             while len(assigned) < needed:
                 if state.next_unsolved_index > \
-                   len(state.assemblies_unsolved) - 1:
+                   len(state.combinations_unsolved) - 1:
                     state.next_unsolved_index = 0
 
                 assigned.append(
-                        state.assemblies_unsolved[state.next_unsolved_index])
+                        state.combinations_unsolved[state.next_unsolved_index])
 
                 state.next_unsolved_index += 1
 
-            ret['next_assemblies'] = assigned
+            ret['next_combinations'] = assigned
 
     return json.dumps(ret)
 

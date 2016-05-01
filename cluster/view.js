@@ -101,7 +101,7 @@ var View = React.createClass({
           <td>{worker.cores}</td>
           <td>{run_rate}</td>
           <td>{worker.programs_run.toLocaleString()}</td>
-          <td>{worker.assemblies_completed}</td>
+          <td>{worker.combinations_completed}</td>
           <td>{worker.status}</td>
         </tr>
       );
@@ -144,8 +144,8 @@ var View = React.createClass({
     let solved = [];
     for (let a of this.state.server.solved) {
       solved.push(
-        <span key={a.assembly}>
-          {a.assembly} [{a.programs_completed}]&nbsp;
+        <span key={a.combination}>
+          {a.combination} [{a.programs_completed}]&nbsp;
         </span>
       );
     }
@@ -176,7 +176,7 @@ var View = React.createClass({
           <br />
           programs run: { this.state.server.programs_run.toLocaleString() }
           <br />
-          assemblies run: { this.state.server.solved.length }
+          combinations run: { this.state.server.solved.length }
           <br />
           rate: { run_rate }
           <br />
@@ -187,7 +187,7 @@ var View = React.createClass({
                 <th>cores</th>
                 <th>rate</th>
                 <th>programs run</th>
-                <th>assemblies completed</th>
+                <th>combinations completed</th>
                 <th>status</th>
               </tr>
             </thead>
@@ -195,11 +195,11 @@ var View = React.createClass({
               { workers }
             </tbody>
           </table>
-          unsolved assemblies:
+          unsolved combinations:
           <div>
             {this.state.server.unsolved.join(' ')}
           </div>
-          solved assemblies:
+          solved combinations:
           <div>
             {solved}
           </div>

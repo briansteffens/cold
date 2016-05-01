@@ -18,7 +18,7 @@ typedef struct SolveThreadArgs
     // Input args (write by solve, read by solve_thread)
     const char* solver_file;
     char* output_dir;
-    int assembly;
+    int combination;
     bool output_generated;
     bool print_solutions;
     bool find_all_solutions;
@@ -729,7 +729,7 @@ void parse_solver_file(Context* ctx, const char* solver_file)
     free(lines);
 }
 
-// Solve a single assembly
+// Solve a single combination
 void* solve_thread(void* ptr)
 {
     SolveThreadArgs* args = (SolveThreadArgs*)ptr;
@@ -781,19 +781,19 @@ void* solve_thread(void* ptr)
         }
     }
 
-    // Restrict pattern mask to specified assembly
-    if (args->assembly >= 0)
+    // Restrict pattern mask to specified combination
+    if (args->combination >= 0)
     {
-        int assembly_patterns[ctx.depth];
+        int combination_patterns[ctx.depth];
 
-        permute(assembly_patterns, ctx.depth, ctx.pattern_count,
-                args->assembly);
+        permute(combination_patterns, ctx.depth, ctx.pattern_count,
+                args->combination);
 
         for (int d = 0; d < ctx.depth; d++)
         {
             for (int p = 0; p < ctx.pattern_count; p++)
             {
-                ctx.pattern_mask[d][p] = assembly_patterns[d] == p;
+                ctx.pattern_mask[d][p] = combination_patterns[d] == p;
             }
         }
     }
@@ -920,7 +920,7 @@ void print_total_status(SolveThreadInfo info[], int threads,
 
 // Bootstrap a multi-threaded solve operation
 void solve(const char* solver_file, const char* output_dir, int threads,
-        int assembly_start, int assembly_count, bool interactive,
+        int combination_start, int combination_count, bool interactive,
         bool print_solutions, bool find_all_solutions, bool output_generated)
 {
     SolveThreadInfo info[threads];
@@ -932,17 +932,17 @@ void solve(const char* solver_file, const char* output_dir, int threads,
         info[i].args.ret_programs_completed = 0;
     }
 
-    // All assemblies
-    if (assembly_start == -1)
+    // All combinations
+    if (combination_start == -1)
     {
         Context ctx;
         parse_solver_file(&ctx, solver_file);
 
-        assembly_start = 0;
-        assembly_count = exponent(ctx.pattern_count, ctx.depth);
+        combination_start = 0;
+        combination_count = exponent(ctx.pattern_count, ctx.depth);
     }
 
-    int assembly = assembly_start;
+    int combination = combination_start;
 
     mkdir(output_dir, 0777);
 
@@ -979,7 +979,7 @@ void solve(const char* solver_file, const char* output_dir, int threads,
                 }
             }
 
-            if (assembly >= assembly_start + assembly_count)
+            if (combination >= combination_start + combination_count)
             {
                 bool any_still_running = false;
 
@@ -1001,7 +1001,7 @@ void solve(const char* solver_file, const char* output_dir, int threads,
             }
 
             info[i].args.solver_file = solver_file;
-            info[i].args.assembly = assembly;
+            info[i].args.combination = combination;
             info[i].args.output_generated = output_generated;
             info[i].args.ret_done = false;
             info[i].args.ret_solved = false;
@@ -1009,9 +1009,10 @@ void solve(const char* solver_file, const char* output_dir, int threads,
             info[i].args.find_all_solutions = find_all_solutions;
 
             info[i].args.output_dir = malloc(255 * sizeof(char));
-            sprintf(info[i].args.output_dir, "%s/%d/", output_dir, assembly);
+            sprintf(info[i].args.output_dir, "%s/%d/", output_dir,
+                    combination);
 
-            assembly++;
+            combination++;
 
             int res = pthread_create(&info[i].thread, NULL, solve_thread,
                     (void*)&info[i].args);

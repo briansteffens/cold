@@ -26,7 +26,7 @@ WORKING_DIR = 'workers/' + WORKER_ID + '/'
 SOLVER_FILE = WORKING_DIR + 'solver.solve'
 
 first_status = True
-assembly_queue = []
+combination_queue = []
 
 def mkdir_p(path):
     try:
@@ -49,15 +49,15 @@ reset_working_dir()
 
 processes = []
 
-def launch_process(assembly):
+def launch_process(combination):
     global processes
 
-    cmd = ('bin/cold solve {} --assembly={} --assembly-count=1 '
+    cmd = ('bin/cold solve {} --combination={} --combination-count=1 '
            '--non-interactive --all --output-dir={} --hide-solutions') \
-            .format(SOLVER_FILE, assembly, WORKING_DIR)
+            .format(SOLVER_FILE, combination, WORKING_DIR)
 
     p = {
-        'assembly': assembly,
+        'combination': combination,
         'process': subprocess.Popen(cmd.split(), stdout=subprocess.PIPE,
             bufsize=1),
         'programs_completed': 0,
@@ -85,8 +85,8 @@ while True:
         'token': TOKEN,
         'worker_id': WORKER_ID,
         'cores': CORES,
-        'assemblies_queued': assembly_queue,
-        'assemblies_completed': [],
+        'combinations_queued': combination_queue,
+        'combinations_completed': [],
         'solutions': [],
     }
 
@@ -112,29 +112,29 @@ while True:
 
         # Process is finished, clean up
         ac = {
-            'assembly': p['assembly'],
+            'combination': p['combination'],
             'programs_completed': p['programs_completed'],
             'solutions': [],
         }
 
         # Check for solutions
         solution_files = glob.glob('{}{}/solution.cold'.format(WORKING_DIR,
-                str(p['assembly'])))
+                str(p['combination'])))
 
         for solution_fn in solution_files:
             with open(solution_fn) as f:
                 ac['solutions'].extend([
                         s.strip() for s in f.read().split('---') if s.strip()])
 
-        data['assemblies_completed'].append(ac)
+        data['combinations_completed'].append(ac)
 
         to_remove.append(p)
 
     processes = [p for p in processes if p not in to_remove]
 
-    # Set assemblies running state
-    data['assemblies_running'] = [{
-        'assembly': p['assembly'],
+    # Set combinations running state
+    data['combinations_running'] = [{
+        'combination': p['combination'],
         'programs_completed': p['programs_completed'],
     } for p in processes]
 
@@ -174,13 +174,13 @@ while True:
         with open(SOLVER_FILE, 'w') as f:
             f.write(res['solver'])
 
-    # Load new assemblies into the queue if the server sent any
-    if 'next_assemblies' in res:
-        assembly_queue.extend(res['next_assemblies'])
+    # Load new combinations into the queue if the server sent any
+    if 'next_combinations' in res:
+        combination_queue.extend(res['next_combinations'])
 
     # Launch processes off the queue up to max cores
-    while len(assembly_queue) > 0 and len(processes) < CORES:
-        n = assembly_queue.pop(0)
+    while len(combination_queue) > 0 and len(processes) < CORES:
+        n = combination_queue.pop(0)
         launch_process(n)
 
     sleep(30 if res['status'] == 'disarmed' else 1)
