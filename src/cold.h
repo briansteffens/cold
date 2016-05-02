@@ -165,14 +165,14 @@ void instruction_tostring(Instruction* input, char* buf, int n);
 void instruction_free(Instruction* inst);
 Instruction* instruction_clone(Instruction* orig);
 
-void free_function(Function* func);
+void function_free(Function* func);
 
-void free_combination(Combination* combination);
+void combination_free(Combination* combination);
 
-void free_pattern(Pattern* pattern);
+void pattern_free(Pattern* pattern);
 
 void local_free(Local* local);
 
-void free_state(State* state);
+void state_free(State* state);
 
 void print_program(Instruction** inst, int count, bool line_nums);

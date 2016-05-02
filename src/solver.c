@@ -237,7 +237,7 @@ void check_cases(Context* ctx, State* base, Local* found)
                     states[0]->instructions[i]);
         }
 
-        free_state(states[0]);
+        state_free(states[0]);
 
         if (!success)
             break;
@@ -386,7 +386,7 @@ void step_vary(Context* ctx, State* state)
     // Free forked states
     for (int j = 0; j < varied_count; j++)
     {
-        free_state(varied[j]);
+        state_free(varied[j]);
     }
 
     free(varied);
@@ -599,7 +599,7 @@ void* solve_thread(void* ptr)
     args->ret_solved = (ctx.solution_inst != NULL);
 
     // Free the root state
-    free_state(root[0]);
+    state_free(root[0]);
     free(root);
 
     // Free the context
@@ -638,7 +638,7 @@ void* solve_thread(void* ptr)
 
     for (int i = 0; i < ctx.pattern_count; i++)
     {
-        free_pattern(ctx.patterns[i]);
+        pattern_free(ctx.patterns[i]);
     }
     free(ctx.patterns);
 
@@ -742,7 +742,7 @@ void solve(const char* solver_file, const char* output_dir, int threads,
                 pthread_join(info[i].thread, NULL);
                 free(info[i].args.output_dir);
                 info[i].started = false;
-                free_combination(&info[i].args.combination);
+                combination_free(&info[i].args.combination);
                 info[i].args.ret_done = false;
                 completed_by_old_threads +=
                     info[i].args.ret_programs_completed;

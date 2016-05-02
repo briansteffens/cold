@@ -192,11 +192,11 @@ void handle_run(const char* filename, char** inputs, int inputs_count)
     printf("Return: %s [%s]\n", buf, var_type_tostring(state->ret->type));
 
     // Free stuff
-    free_state(state);
+    state_free(state);
 
     for (int i = 0; i < function_count; i++)
     {
-        free_function(functions[i]);
+        function_free(functions[i]);
         free(functions[i]);
     }
 
@@ -230,7 +230,7 @@ void handle_combinations(int argc, char* argv[])
             printf("  %s\n", buf);
         }
 
-        free_combination(&combination);
+        combination_free(&combination);
 
         printf("\n");
     }

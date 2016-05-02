@@ -411,7 +411,7 @@ Instruction* instruction_clone(Instruction* orig)
     return ret;
 }
 
-void free_function(Function* func)
+void function_free(Function* func)
 {
     free(func->name);
 
@@ -430,7 +430,7 @@ void free_function(Function* func)
     free(func->insts);
 }
 
-void free_combination(Combination* combination)
+void combination_free(Combination* combination)
 {
     for (int i = 0; i < combination->instruction_count; i++)
     {
@@ -441,7 +441,7 @@ void free_combination(Combination* combination)
     free(combination->instructions);
 }
 
-void free_pattern(Pattern* pattern)
+void pattern_free(Pattern* pattern)
 {
     for (int i = 0; i < pattern->inst_count; i++)
     {
@@ -461,7 +461,7 @@ void local_free(Local* local)
     free(local);
 }
 
-void free_state(State* state)
+void state_free(State* state)
 {
     for (int i = 0; i < state->instruction_count; i++)
     {
