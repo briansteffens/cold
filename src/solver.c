@@ -10,6 +10,7 @@
 #include "cold.h"
 #include "general.h"
 #include "interpreter.h"
+#include "solver.h"
 #include "compiler.h"
 #include "permute.h"
 #include "combiner.h"
@@ -688,17 +689,15 @@ void print_total_status(SolveThreadInfo info[], int threads,
 }
 
 // Bootstrap a multi-threaded solve operation
-void solve(const char* solver_file, const char* output_dir, int threads,
-        int combination_start, int combination_count, bool interactive,
-        bool print_solutions, bool find_all_solutions, bool output_generated)
+void solve(SolveArgs* args)
 {
     // TODO: temp
     Context ctx;
-    parse_solver_file(&ctx, solver_file);
+    parse_solver_file(&ctx, args->solver_file);
 
-    SolveThreadInfo info[threads];
+    SolveThreadInfo info[args->threads];
 
-    for (int i = 0; i < threads; i++)
+    for (int i = 0; i < args->threads; i++)
     {
         info[i].started = false;
         info[i].args.ret_done = false;
@@ -706,20 +705,20 @@ void solve(const char* solver_file, const char* output_dir, int threads,
     }
 
     // All combinations
-    if (combination_start == -1)
+    if (args->combination_start == -1)
     {
         Context ctx;
-        parse_solver_file(&ctx, solver_file);
+        parse_solver_file(&ctx, args->solver_file);
 
-        combination_start = 0;
-        combination_count = exponent(ctx.pattern_count, ctx.depth);
+        args->combination_start = 0;
+        args->combination_count = exponent(ctx.pattern_count, ctx.depth);
     }
 
-    int combination_index = combination_start;
+    int combination_index = args->combination_start;
 
-    mkdir(output_dir, 0777);
+    mkdir(args->output_dir, 0777);
 
-    if (output_generated)
+    if (args->output_generated)
     {
         remove("output/generated_programs");
     }
@@ -730,7 +729,7 @@ void solve(const char* solver_file, const char* output_dir, int threads,
 
     while (true)
     {
-        for (int i = 0; i < threads; i++)
+        for (int i = 0; i < args->threads; i++)
         {
             if (info[i].started)
             {
@@ -740,24 +739,29 @@ void solve(const char* solver_file, const char* output_dir, int threads,
                 }
 
                 pthread_join(info[i].thread, NULL);
+
+                // Cleanup finished thread data
                 free(info[i].args.output_dir);
-                info[i].started = false;
                 combination_free(&info[i].args.combination);
+
+                info[i].started = false;
                 info[i].args.ret_done = false;
                 completed_by_old_threads +=
                     info[i].args.ret_programs_completed;
                 info[i].args.ret_programs_completed = 0;
-                if (info[i].args.ret_solved && !find_all_solutions)
+
+                if (info[i].args.ret_solved && !args->find_all_solutions)
                 {
                     goto all_done;
                 }
             }
 
-            if (combination_index >= combination_start + combination_count)
+            if (combination_index >=
+                args->combination_start + args->combination_count)
             {
                 bool any_still_running = false;
 
-                for (int j = 0; j < threads; j++)
+                for (int j = 0; j < args->threads; j++)
                 {
                     if (info[j].started)
                     {
@@ -774,16 +778,18 @@ void solve(const char* solver_file, const char* output_dir, int threads,
                 continue;
             }
 
+            // Launch new thread
             combine(&ctx, combination_index, &info[i].args.combination);
-            info[i].args.solver_file = solver_file;
-            info[i].args.output_generated = output_generated;
+
+            info[i].args.solver_file = args->solver_file;
+            info[i].args.output_generated = args->output_generated;
             info[i].args.ret_done = false;
             info[i].args.ret_solved = false;
-            info[i].args.print_solutions = print_solutions;
-            info[i].args.find_all_solutions = find_all_solutions;
+            info[i].args.print_solutions = args->print_solutions;
+            info[i].args.find_all_solutions = args->find_all_solutions;
 
             info[i].args.output_dir = malloc(255 * sizeof(char));
-            sprintf(info[i].args.output_dir, "%s/%d/", output_dir,
+            sprintf(info[i].args.output_dir, "%s/%d/", args->output_dir,
                     combination_index);
 
             combination_index++;
@@ -804,8 +810,8 @@ void solve(const char* solver_file, const char* output_dir, int threads,
 
         if (now > last)
         {
-            print_total_status(info, threads, completed_by_old_threads,
-                    program_start, interactive);
+            print_total_status(info, args->threads, completed_by_old_threads,
+                    program_start, args->interactive);
             last = now;
         }
 
@@ -813,8 +819,8 @@ void solve(const char* solver_file, const char* output_dir, int threads,
     }
 
     all_done:
-    print_total_status(info, threads, completed_by_old_threads, program_start,
-            interactive);
+    print_total_status(info, args->threads, completed_by_old_threads,
+            program_start, args->interactive);
     printf("\n");
     exit(EXIT_SUCCESS);
 }

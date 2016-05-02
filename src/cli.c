@@ -18,67 +18,65 @@ int usage()
 
 void handle_solver(int argc, char* argv[])
 {
-    char* solver_file = NULL;
-    int combination_index = -1;
-    int combination_count = 1;
-    bool output_generated = false;
-    int threads = 1;
-    bool interactive = true;
-    char* output_dir = "output/";
-    bool print_solutions = true;
-    bool find_all_solutions = false;
+    SolveArgs args;
 
-    Context ctx;
+    args.solver_file = NULL;
+    args.combination_start = -1;
+    args.combination_count = 1;
+    args.output_generated = false;
+    args.threads = 1;
+    args.interactive = true;
+    args.output_dir = "output/";
+    args.print_solutions = true;
+    args.find_all_solutions = false;
 
     for (int i = 0; i < argc; i++)
     {
         if (starts_with(argv[i], "--combination="))
         {
-            combination_index = atoi(argv[i] + 14);
+            args.combination_start = atoi(argv[i] + 14);
         }
         else if (starts_with(argv[i], "--combination-count="))
         {
-            combination_count = atoi(argv[i] + 20);
+            args.combination_count = atoi(argv[i] + 20);
         }
         else if (strcmp(argv[i], "--output-all") == 0)
         {
-            output_generated = true;
+            args.output_generated = true;
         }
         else if (starts_with(argv[i], "--threads="))
         {
-            threads = atoi(argv[i] + 10);
+            args.threads = atoi(argv[i] + 10);
         }
         else if (strcmp(argv[i], "--non-interactive") == 0)
         {
-            interactive = false;
+            args.interactive = false;
         }
         else if (starts_with(argv[i], "--output-dir="))
         {
-            output_dir = argv[i] + 13;
+            args.output_dir = argv[i] + 13;
         }
         else if (strcmp(argv[i], "--hide-solutions") == 0)
         {
-            print_solutions = false;
+            args.print_solutions = false;
         }
         else if (strcmp(argv[i], "--all") == 0)
         {
-            find_all_solutions = true;
+            args.find_all_solutions = true;
         }
         else
         {
-            solver_file = argv[i];
+            args.solver_file = argv[i];
         }
     }
 
-    if (solver_file == NULL)
+    if (args.solver_file == NULL)
     {
         usage();
         return;
     }
 
-    solve(solver_file, output_dir, threads, combination_index,
-            combination_count, interactive, print_solutions,
-            find_all_solutions, output_generated);
+    solve(&args);
 }
 
 void handle_run(const char* filename, char** inputs, int inputs_count)
