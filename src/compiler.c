@@ -17,7 +17,7 @@ void parse_param(Param* param, char* src)
     }
     else if (prefix == '!')
     {
-        param->type = PARAM_PATTERN;
+        param->type = PARAM_SUBSTITUTION;
 
         int pattern_flags = 0;
         int src_len = strlen(src);

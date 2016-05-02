@@ -3,19 +3,19 @@
 #include "cold.h"
 #include "permute.h"
 
-// Information about a permutation of pattern parameters
+// Information about a permutation of substitution parameters
 typedef struct PermuteParamsInfo
 {
     int param_count;
-    Param** pattern_params;
+    Param** substitution_params;
     int* permutation_counts;
     int all_count;
 } PermuteParamsInfo;
 
-// Count all possible substitutions for a param pattern
-int count_param_substitutions(Context* ctx, State* state, Param* pattern)
+// Count all possible variations of a substitution parameter
+int count_param_substitutions(Context* ctx, State* state, Param* substitution)
 {
-    int flags = *((int*)pattern->value->data);
+    int flags = *((int*)substitution->value->data);
 
     int count = 0;
 
@@ -75,36 +75,37 @@ Param* permute_param(Context* ctx, State* state, Param* param,
 
 // Collect information about a param permutation operation.
 //
-// info->pattern_params and info->permutation_counts must be freed by the
+// info->substitution_params and info->permutation_counts must be freed by the
 // caller.
 void permute_params_info(Context* ctx, State* state, Instruction* instruction,
         PermuteParamsInfo* info)
 {
     info->param_count = 0;
-    info->pattern_params = malloc(0);
+    info->substitution_params = malloc(0);
     info->permutation_counts = malloc(0);
     info->all_count = 1;
 
     for (int i = 0; i < instruction->param_count; i++)
     {
-        if (instruction->params[i]->type != PARAM_PATTERN)
+        if (instruction->params[i]->type != PARAM_SUBSTITUTION)
         {
             continue;
         }
 
         info->param_count++;
 
-        // Add to the list of pattern params being permuted
-        info->pattern_params = realloc(info->pattern_params,
+        // Add to the list of substitution params being permuted
+        info->substitution_params = realloc(info->substitution_params,
                 info->param_count * sizeof(Param*));
-        info->pattern_params[info->param_count - 1] = instruction->params[i];
+        info->substitution_params[info->param_count - 1] =
+                instruction->params[i];
 
         // Store the number of permutations possible for this param
         info->permutation_counts = realloc(info->permutation_counts,
                 info->param_count * sizeof(int));
         info->permutation_counts[info->param_count - 1] =
             count_param_substitutions(ctx, state,
-                info->pattern_params[info->param_count - 1]);
+                info->substitution_params[info->param_count - 1]);
 
         // Compute the total number of permutations for the instruction
         info->all_count *= info->permutation_counts[info->param_count - 1];
@@ -205,7 +206,7 @@ void unique_mask(PermuteParamsInfo* info, InstructionType instruction_type,
     }
 }
 
-// Compute all permutations of pattern params in a given [instruction].
+// Compute all permutations of substitution params in a given [instruction].
 //
 // The return value must be freed by the caller.
 Param*** permute_params(Context* ctx, State* state, Instruction* instruction,
@@ -251,15 +252,15 @@ Param*** permute_params(Context* ctx, State* state, Instruction* instruction,
 
         for (int p = 0; p < info.param_count; p++)
         {
-            ret[ret_i][p] = permute_param(ctx, state, info.pattern_params[p],
-                    all[all_i][p]);
+            ret[ret_i][p] = permute_param(ctx, state,
+                    info.substitution_params[p], all[all_i][p]);
         }
 
         ret_i++;
     }
 
     // Cleanup
-    free(info.pattern_params);
+    free(info.substitution_params);
     free(info.permutation_counts);
 
     *out_permutation_count = ret_count;
@@ -281,7 +282,7 @@ Instruction** permute_instruction(Context* ctx, State* state,
     Instruction** ret = malloc(permutation_count * sizeof(Instruction*));
 
     // For each param permutation, clone the instruction and replace the
-    // pattern params with the permutation values
+    // substitution params with the permutation values
     for (int i = 0; i < permutation_count; i++)
     {
         ret[i] = instruction_clone(instruction);
@@ -290,16 +291,16 @@ Instruction** permute_instruction(Context* ctx, State* state,
 
         for (int p = 0; p < ret[i]->param_count; p++)
         {
-            if (ret[i]->params[p]->type != PARAM_PATTERN)
+            if (ret[i]->params[p]->type != PARAM_SUBSTITUTION)
             {
                 continue;
             }
 
-            // Free the pattern being replaced
+            // Free the param being replaced
             value_free(ret[i]->params[p]->value);
             free(ret[i]->params[p]);
 
-            // Replace the pattern param
+            // Replace the param
             ret[i]->params[p] = permutations[i][r];
             r++;
         }

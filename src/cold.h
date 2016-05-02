@@ -6,37 +6,37 @@ typedef enum { false, true } bool;
 
 typedef enum ValueTypes
 {
-    TYPE_INT
-,   TYPE_FLOAT
-,   TYPE_LONG_DOUBLE
-,   TYPE_STRING
+    TYPE_INT,
+    TYPE_FLOAT,
+    TYPE_LONG_DOUBLE,
+    TYPE_STRING
 } ValueType;
 
 typedef enum ParamTypes
 {
-    PARAM_LABEL
-,   PARAM_LITERAL
-,   PARAM_PATTERN
+    PARAM_LABEL,
+    PARAM_LITERAL,
+    PARAM_SUBSTITUTION
 } ParamType;
 
 typedef enum InstructionTypes
 {
-    INST_LET
-,   INST_ADD
-,   INST_MUL
-,   INST_DIV
-,   INST_EXP
-,   INST_JUMP
-,   INST_CMP
-,   INST_RET
-,   INST_PRINT
-,   INST_NEXT
+    INST_LET,
+    INST_ADD,
+    INST_MUL,
+    INST_DIV,
+    INST_EXP,
+    INST_JUMP,
+    INST_CMP,
+    INST_RET,
+    INST_PRINT,
+    INST_NEXT
 } InstructionType;
 
 typedef enum PatternValues
 {
-    PTRN_LOCALS = 1
-,   PTRN_CONSTANTS = 2
+    PTRN_LOCALS = 1,
+    PTRN_CONSTANTS = 2
 } Patterns;
 
 typedef struct Value

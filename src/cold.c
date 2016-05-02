@@ -49,8 +49,8 @@ char* param_type_tostring(ParamType input)
         return "label";
     case PARAM_LITERAL:
         return "literal";
-    case PARAM_PATTERN:
-        return "pattern";
+    case PARAM_SUBSTITUTION:
+        return "substitution";
     default:
         printf("ParamType %d not supported\n", input);
         exit(0);
@@ -344,7 +344,7 @@ void param_tostring(Param* p, char* buf, int n)
     case PARAM_LABEL:
         prefix = "$";
         break;
-    case PARAM_PATTERN:
+    case PARAM_SUBSTITUTION:
         prefix = "!";
         break;
     default:

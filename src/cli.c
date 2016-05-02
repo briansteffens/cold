@@ -7,7 +7,6 @@
 #include "interpreter.h"
 #include "compiler.h"
 #include "solver.h"
-#include "generator.h"
 #include "combiner.h"
 
 int usage()
