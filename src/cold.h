@@ -39,14 +39,6 @@ typedef enum PatternValues
 ,   PTRN_CONSTANTS = 2
 } Patterns;
 
-char* var_type_tostring(ValueType input);
-ValueType var_type_fromstring(char* input);
-
-char* param_type_tostring(ParamType input);
-
-char* instruction_type_tostring(InstructionType input);
-InstructionType instruction_type_fromstring(char* input);
-
 typedef struct Value
 {
     ValueType type;
@@ -109,29 +101,11 @@ typedef struct Context
     char* solution_fn;
 } Context;
 
-void value_tostring(Value* val, char* buf, int n);
-void value_set_string(Value* value, char* val);
-void value_set_int(Value* value, int val);
-void value_set_float(Value* value, float val);
-void value_set_long_double(Value* value, long double val);
-void value_set_from_string(Value* value, char* input);
-Value* value_clone(const Value* src);
-bool compare(Context* ctx, Value* left, Value* right);
-void value_free(Value* value);
-
 typedef struct Local
 {
     char* name;
     Value* value;
 } Local;
-
-void param_tostring(Param* p, char* buf, int n);
-
-void params_allocate(Instruction* inst, int param_count);
-
-void instruction_tostring(Instruction* input, char* buf, int n);
-void instruction_free(Instruction* inst);
-Instruction* instruction_clone(Instruction* orig);
 
 typedef struct State
 {
@@ -159,13 +133,39 @@ typedef struct Function
     int inst_count;
 } Function;
 
-void free_function(Function* func);
-
 typedef struct Combination
 {
     Instruction** instructions;
     int instruction_count;
 } Combination;
+
+char* var_type_tostring(ValueType input);
+ValueType var_type_fromstring(char* input);
+
+char* param_type_tostring(ParamType input);
+
+char* instruction_type_tostring(InstructionType input);
+InstructionType instruction_type_fromstring(char* input);
+
+void value_tostring(Value* val, char* buf, int n);
+void value_set_string(Value* value, char* val);
+void value_set_int(Value* value, int val);
+void value_set_float(Value* value, float val);
+void value_set_long_double(Value* value, long double val);
+void value_set_from_string(Value* value, char* input);
+Value* value_clone(const Value* src);
+bool compare(Context* ctx, Value* left, Value* right);
+void value_free(Value* value);
+
+void param_tostring(Param* p, char* buf, int n);
+
+void params_allocate(Instruction* inst, int param_count);
+
+void instruction_tostring(Instruction* input, char* buf, int n);
+void instruction_free(Instruction* inst);
+Instruction* instruction_clone(Instruction* orig);
+
+void free_function(Function* func);
 
 void free_combination(Combination* combination);
 
