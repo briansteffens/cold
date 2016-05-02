@@ -2,8 +2,6 @@ bool starts_with(const char* haystack, const char* needle);
 
 int exponent(int base, int power);
 
-bool is_whitespace(char c);
-
 // Trim whitespace from <input>.
 //
 // The return value must be freed by the caller.
