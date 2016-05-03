@@ -59,6 +59,41 @@ The structure of a cold cluster is as follows:
   to the cold binary `bin/cold`, and send results back to the server.
   Implemented in `cluster/worker.py`.
 
+## Manual deployment
+
+Both the server and any workers will require the repository downloaded and
+`make` run (see section `Downloading and compiling`).
+
+Both also require python3.
+
+### Server
+
+The server requires flask. To run the server (from the root of the repository),
+run the following command, substituting $TOKEN for whatever you want. $TOKEN
+will be used to authenticate the workers against the server as well as the
+web console.
+
+```bash
+cluster/server.py $TOKEN
+```
+
+### Workers
+
+On each worker, run the following command:
+
+```bash
+cluster/worker.py $SERVER_URL $TOKEN $WORKER_ID $CORES
+```
+
+Where:
+
+- **$SERVER_URL** is the base URL of the server
+  (default: http://localhost:5000/).
+- **$TOKEN** is the same as the token used to start the server.
+- **$WORKER_ID** is a label used to identify this worker. This can be whatever
+  you want.
+- **$CORES** is the number of threads to devote to cold on this worker.
+
 ## Deployment on Linode
 
 *Note: this deployment option currently uses HTTP for communication between
