@@ -112,6 +112,22 @@ to the current instruction for every other case in the solver file. If the
 program produces the expected output in the same local variable for every case,
 that program is considered a solution.
 
+The solver file above will produce something like the following:
+
+```cold
+def main $x
+    add $x $x $x
+    add $x $x 1
+    ret $x
+```
+
+Which, in a prettier language, would look something like:
+
+```python
+def main(x):
+    return x + x + 1
+```
+
 
 # Downloading and compiling
 
