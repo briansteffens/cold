@@ -1,6 +1,118 @@
 cold
 ====
 
+A constraint-based, brute-force program generator and interpreted language for
+fun and experimentation.
+
+
+# Overview
+
+The basic idea is you feed cold a list of inputs and their corresponding
+expected outputs, along with a set of code patterns (instructions) and any
+possibly-related constants as hints. Cold will then attempt to brute-force a
+programmatic solution that satisfies the given constraints.
+
+
+## Solver file
+
+The solver file provides the overall context for an attempt at generating a
+cold program. Here is a basic solver file:
+
+```
+# The maximum number of patterns per generated program
+depth 2
+
+# A constant value that will be placed in the programs
+constant 1
+
+# The patterns cold can use (see below)
+pattern add
+pattern mul
+
+# The name of the input variable
+input x
+
+# Given an input of 2, the program should produce 5
+case 2 5
+
+# Given an input of 3, the same program should produce 7
+case 3 7
+```
+
+
+## Patterns
+
+Patterns correspond roughly to instructions but they can technically have more
+than one instruction (in order to express conditionals, loops, or even
+fundamental algorithms). Patterns are located in the [patterns/](patterns/)
+directory.
+
+The solver example above includes the add and mul patterns which look like:
+
+**add**:
+```
+add !l !l !lc
+nxt
+```
+
+**mul**:
+```
+mul !l !l !lc
+nxt
+```
+
+Each line in a pattern is a cold instruction followed by parameters. `add` and
+`mul` refer to the mathematical operations.
+
+`nxt` indicates the location within the pattern that the next pattern in the
+*combination* will be inserted.
+
+
+## Combinations
+
+Cold will read the list of included patterns out of the solver file and use
+that to construct a number of *combinations*. In the above example, since there
+is a depth of 2 and the patterns `add` and `mul` are included, the following
+combinations will be produced:
+
+```
+add        add        mul        mul
+add        mul        add        mul
+```
+
+All possible permutations of all given patterns are attempted, up to the limit
+specified by depth.
+
+
+## Substitution
+
+The cold interpreter will run each combination of patterns independently. Each
+line will be interpreted sequentially as would be expected. Where things get a
+little less expected is when it encounters a *substitution parameter*
+(parameters that start with an exclamation point). A *substitution parameter*
+means that when the interpreter reaches that line, the interpreter state will
+fork for every possible substitution of that parameter. `!l` includes all local
+variables in scope. `!lc` includes all locals as well as all constants. So the
+`add` pattern will produce an instruction that will try adding all combinations
+of local variables and constants to each other.
+
+Substitutions are done by forking (cloning) the interpreter state at the point
+of substitution, creating a tree of related interpreter states. This way not
+every possible variant of a program has to be executed in its entirety: the
+similar parts of variations can be executed once and then forked where they
+begin to diverge.
+
+
+## Detecting solutions
+
+As the cold interpreter runs, it checks all locals within a program's state
+for the expected output in the case being run. If it finds the expected output
+in any local variable, it pauses interpretation and runs the same program up
+to the current instruction for every other case in the solver file. If the
+program produces the expected output in the same local variable for every case,
+that program is considered a solution.
+
+
 # Downloading and compiling
 
 You'll need git to download the source code and gcc to compile it.
@@ -15,6 +127,7 @@ git clone https://github.com/briansteffens/ccold
 cd ccold
 make
 ```
+
 
 # Usage
 
@@ -42,6 +155,7 @@ View the line-by-line debug output including variable dumps:
 cat output/debug
 ```
 
+
 # Cluster
 
 Cold has a clustering system for spreading the work of a solver across multiple
@@ -59,12 +173,14 @@ The structure of a cold cluster is as follows:
   to the cold binary `bin/cold`, and send results back to the server.
   Implemented in `cluster/worker.py`.
 
+
 ## Manual deployment
 
 Both the server and any workers will require the repository downloaded and
 `make` run (see section `Downloading and compiling`).
 
 Both also require python3.
+
 
 ### Server
 
@@ -76,6 +192,7 @@ web console.
 ```bash
 cluster/server.py $TOKEN
 ```
+
 
 ### Workers
 
@@ -94,12 +211,14 @@ Where:
   you want.
 - **$CORES** is the number of threads to devote to cold on this worker.
 
+
 ## Deployment on Linode
 
 *Note: this deployment option currently uses HTTP for communication between
 workers, the server, and the console. Don't reuse a password you use for other
 services as the token and don't enter any information into the console you
 don't want getting out.*
+
 
 ### Server
 
@@ -110,6 +229,7 @@ web console and for subscribing cluster workers to this server. If you want to
 work off of a fork or particular branch, customize the `git_source` and
 `git_branch` fields.
 
+
 ### Workers
 
 To enroll worker instances in a cluster server, use this
@@ -118,6 +238,7 @@ To enroll worker instances in a cluster server, use this
 (example: `http://192.168.1.123/`). Use the same `token` you used to create the
 server. You can also give each worker a descriptive name with `worker_id` and
 a max number of threads to devote to program execution.
+
 
 ### Console
 
