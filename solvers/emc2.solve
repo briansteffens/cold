@@ -12,5 +12,5 @@ pattern mul
 input z
 
 # Expected: kg to joules conversions
-case 1.0f 90000000000000000.0f
-case 86.18f 7756200000000001024.0f
+case (1.0f)   => 90000000000000000.0f
+case (86.18f) => 7756200000000001024.0f

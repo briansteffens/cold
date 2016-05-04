@@ -13,6 +13,6 @@ pattern exp
 input r
 input h
 
-case 1.0f 3.0f 9.43f
-case 2.0f 1.5f 18.85f
-case 4.0f 7.5f 376.9908f
+case (1.0f, 3.0f) => 9.43f
+case (2.0f, 1.5f) => 18.85f
+case (4.0f, 7.5f) => 376.9908f

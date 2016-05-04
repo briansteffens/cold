@@ -33,10 +33,10 @@ pattern mul
 input x
 
 # Given an input of 2, the program should produce 5
-case 2 5
+case (2) => 5
 
 # Given an input of 3, the same program should produce 7
-case 3 7
+case (3) => 7
 ```
 
 

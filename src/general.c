@@ -28,23 +28,26 @@ bool is_whitespace(char c)
 char* trim(const char* input)
 {
     int content_start = 0;
-    int content_end = 0;
-
     int input_len = strlen(input);
+    int content_end = input_len - 1;
 
     for (int i = 0; i < input_len; i++)
+    {
         if (!is_whitespace(input[i]))
         {
             content_start = i;
             break;
         }
+    }
 
     for (int i = input_len - 1; i > content_start; i--)
+    {
         if (!is_whitespace(input[i]))
         {
             content_end = i;
             break;
         }
+    }
 
     int ret_len = content_end - content_start + 1;
     char* ret = malloc((ret_len + 1) * sizeof(char));

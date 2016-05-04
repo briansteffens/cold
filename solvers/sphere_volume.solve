@@ -13,5 +13,5 @@ pattern exp
 
 input r
 
-case 1.0f 4.188786f
-case 2.0f 33.510293f
+case (1.0f) => 4.188786f
+case (2.0f) => 33.510293f

@@ -6,4 +6,4 @@ pattern add
 
 input z
 
-case 2 20
+case (2) => 20

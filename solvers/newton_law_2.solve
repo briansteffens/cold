@@ -10,12 +10,11 @@ input m
 input a
 
 # Usain Bolt average acceleration in 100m dash
-case 94.0f 3.09f 290.46f
+case (94.0f, 3.09f) => 290.46f
 
 # Tesla Model S 90kWh AWD
 #   0-100 km/h time of 4.4 sec
 #     100 km/h = 27.77 m/s
 #     6.13 m/s/s
 #   4824 lb = 2188.13 kg
-case 2188.13f 6.13f 13413.24f
-
+case (2188.13f, 6.13f) => 13413.24f

@@ -12,5 +12,5 @@ pattern div
 input b
 input h
 
-case 5.0f 7.0f 17.5f
-case 3.0f 5.0f 7.5f
+case (5.0f, 7.0f) => 17.5f
+case (3.0f, 5.0f) => 7.5f

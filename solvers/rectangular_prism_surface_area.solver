@@ -5,17 +5,17 @@
 
 depth 8
 
-precision f0.1
+precision 0.1f
 
 pattern add
 pattern mul
 
-constant f2.0
+constant 2.0f
 
 input l
 input w
 input h
 
-case f1.0 f1.0 f1.0 f6.0
-case f1.0 f2.0 f3.0 f22.0
-case f20.0 f10.0 f100.0 f6400.0
+case (1.0f,  1.0f,  1.0f)   => 6.0f
+case (1.0f,  2.0f,  3.0f)   => 22.0f
+case (20.0f, 10.0f, 100.0f) => 6400.0f

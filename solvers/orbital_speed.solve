@@ -16,7 +16,7 @@ input m2
 input d
 
 # Earth mass, moon mass, distance, newtons
-case 5.972e24L 7.34767309e22L 3.8e8L 2.028121e20L
+case (5.972e24L, 7.34767309e22L, 3.8e8L) => 2.028121e20L
 
 # Saturn mass, sun mass, distance, newtons
-case 5.683e26L 1.989e30L 1.433e12L 3.673766e22L
+case (5.683e26L, 1.989e30L, 1.433e12L) => 3.673766e22L

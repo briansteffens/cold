@@ -486,26 +486,48 @@ void parse_solver_file(Context* ctx, const char* solver_file)
 
             new_case->input_values = malloc(ctx->input_count * sizeof(Value));
 
-            // Split parameters
-            int part_count = 0;
-            char** parts = split(line + 5, ' ', &part_count);
+            // Find input parameter list
+            char* inputs_start = strchr(line + 5, '(') + 1;
+            char* inputs_stop = strchr(inputs_start, ')');
+            int inputs_len = inputs_stop - inputs_start;
 
-            if (part_count - 1 != ctx->input_count)
+            char inputs[inputs_len + 1];
+            strncpy(inputs, inputs_start, inputs_len);
+            inputs[inputs_len] = 0;
+
+            // Split inputs
+            int part_count = 0;
+            char** parts = split(inputs, ',', &part_count);
+
+            if (part_count != ctx->input_count)
             {
                 printf("ERROR: case parameter count must match input count\n");
                 exit(0);
             }
 
             // Set inputs
-            for (int i = 0; i < part_count - 1; i++)
+            for (int i = 0; i < part_count; i++)
             {
                 value_set_from_string(&new_case->input_values[i], parts[i]);
             }
 
+            // Find expected output
+            char* expected = strstr(inputs_stop + 1, "=>");
+
+            if (!expected)
+            {
+                printf("case directive requires expected output\n");
+                exit(EXIT_FAILURE);
+            }
+
+            char* expected_value = trim(expected + 2);
+
             // Set expected output
-            value_set_from_string(&new_case->expected, parts[part_count - 1]);
+            value_set_from_string(&new_case->expected, expected_value);
 
             // Free string split values
+            free(expected_value);
+
             for (int i = 0; i < part_count; i++)
                 free(parts[i]);
 

@@ -9,5 +9,5 @@ pattern mul
 
 input z
 
-case 2 7
-case 3 9
+case (2) => 7
+case (3) => 9

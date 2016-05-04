@@ -12,7 +12,7 @@ pattern mul
 
 input r
 
-case 2.0f 50.27f
-case 1.5f 28.27f
-case 13.0f 2123.72f
+case (2.0f) => 50.27f
+case (1.5f) => 28.27f
+case (13.0f) => 2123.72f
 
