@@ -140,21 +140,21 @@ comparisons I've run into in the solvers I've worked on.
 
 ## Type list
 
-*int*
+**int**
 
 This maps to the `int` type in c. Values of this type have no type hint suffix,
 just a basic literal integer.
 
 Examples: `42`, `1024`, `0`
 
-*float*
+**float**
 
 This maps to the `float` type in c. Values of this type are specified by a type
 hint suffix of `f` and can be in either decimal or scientific notation.
 
 Examples: `3.14f`, `6.71e8f`
 
-*long double*
+**long double**
 
 This maps to the `long double` type in c. Values of this type are specified by
 a type hint suffix of 'L' and can only be specified in scientific notation.
