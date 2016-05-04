@@ -207,6 +207,24 @@ Find all programs for E=MC^2:
 bin/cold solve solvers/emc2.solve --all
 ```
 
+Run a long-running solver on multiple threads:
+
+```bash
+bin/cold solve solvers/gravity.solve --threads=12
+```
+
+View all combinations of a solver without running any of them:
+
+```bash
+bin/cold combinations solvers/triangle_area.solve
+```
+
+Run a specific combination by index:
+
+```bash
+bin/cold solve solvers/triangle_area.solve --combination=2
+```
+
 Run a program with an input argument of 2:
 
 ```bash
