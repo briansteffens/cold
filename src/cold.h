@@ -175,4 +175,5 @@ void local_free(Local* local);
 
 void state_free(State* state);
 
-void print_program(Instruction** inst, int count, bool line_nums);
+void print_program(FILE *file, Instruction** instructions,
+        int instruction_count, char** args, int arg_count);

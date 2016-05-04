@@ -485,21 +485,25 @@ void state_free(State* state)
     free(state);
 }
 
-// Print out a list of instructions for debugging purposes
-void print_program(Instruction** inst, int count, bool line_nums)
+void print_program(FILE* file, Instruction** instructions,
+        int instruction_count, char** args, int arg_count)
 {
-    char buf[MAX_INSTRUCTION_LEN];
+    const int BUF_LEN = 255;
+    char buf[BUF_LEN];
 
-    for (int i = 0; i < count; i++)
+    strncpy(buf, "def main", BUF_LEN);
+
+    for (int i = 0; i < arg_count; i++)
     {
-        instruction_tostring(inst[i], buf, MAX_INSTRUCTION_LEN);
-        if (line_nums)
-        {
-            printf("%d %s\n", i, buf);
-        }
-        else
-        {
-            printf("%s\n", buf);
-        }
+        strncat(buf, " $", BUF_LEN);
+        strncat(buf, args[i], BUF_LEN);
+    }
+
+    fprintf(file, "%s\n", buf);
+
+    for (int i = 0; i < instruction_count; i++)
+    {
+        instruction_tostring(instructions[i], buf, BUF_LEN);
+        fprintf(file, "    %s\n", buf);
     }
 }

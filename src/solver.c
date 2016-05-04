@@ -255,30 +255,6 @@ bool is_execution_finished(State* state)
     return state->inst_ptr >= state->instruction_count;
 }
 
-// Write a program to a file
-void fprint_program(FILE* file, Instruction** instructions,
-        int instruction_count, char** args, int arg_count)
-{
-    const int BUF_LEN = 255;
-    char buf[BUF_LEN];
-
-    strncpy(buf, "def main", BUF_LEN);
-
-    for (int i = 0; i < arg_count; i++)
-    {
-        strncat(buf, " $", BUF_LEN);
-        strncat(buf, args[i], BUF_LEN);
-    }
-
-    fprintf(file, "%s\n", buf);
-
-    for (int i = 0; i < instruction_count; i++)
-    {
-        instruction_tostring(instructions[i], buf, BUF_LEN);
-        fprintf(file, "    %s\n", buf);
-    }
-}
-
 // Append a program to generated_programs file
 void fprint_generated_program(Context* ctx, State* state)
 {
@@ -291,7 +267,7 @@ void fprint_generated_program(Context* ctx, State* state)
         exit(0);
     }
 
-    fprint_program(file, state->instructions, state->instruction_count,
+    print_program(file, state->instructions, state->instruction_count,
             ctx->input_names, ctx->input_count);
 
     fprintf(file, "\n");
@@ -351,7 +327,7 @@ void step_vary(Context* ctx, State* state)
                 exit(EXIT_FAILURE);
             }
 
-            fprint_program(solution_file, ctx->solution_inst,
+            print_program(solution_file, ctx->solution_inst,
                     ctx->solution_inst_count, ctx->input_names,
                     ctx->input_count);
 
@@ -364,7 +340,8 @@ void step_vary(Context* ctx, State* state)
         if (ctx->print_solutions)
         {
             printf("\n");
-            print_program(ctx->solution_inst, ctx->solution_inst_count, true);
+            print_program(stdout, ctx->solution_inst, ctx->solution_inst_count,
+                    ctx->input_names, ctx->input_count);
         }
 
         if (!ctx->find_all_solutions)
