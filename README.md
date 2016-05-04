@@ -129,6 +129,54 @@ def main(x):
 ```
 
 
+# Types
+
+More types will probably be added as I find uses for them, but for now just
+a few primitive types are supported. They also don't work well together, so
+you can't really mix-and-match (ints can't be compared to floats). There's no
+technical reason for this, the compare() method just only supports the
+comparisons I've run into in the solvers I've worked on.
+
+
+## Type list
+
+*int*
+
+This maps to the `int` type in c. Values of this type have no type hint suffix,
+just a basic literal integer.
+
+Examples: `42`, `1024`, `0`
+
+*float*
+
+This maps to the `float` type in c. Values of this type are specified by a type
+hint suffix of `f` and can be in either decimal or scientific notation.
+
+Examples: `3.14f`, `6.71e8f`
+
+*long double*
+
+This maps to the `long double` type in c. Values of this type are specified by
+a type hint suffix of 'L' and can only be specified in scientific notation.
+
+Examples: `4e80L`, `6.67408e-11L`
+
+
+## Floating-point comparison
+
+Equality comparison between floating-point types requires a `precision` set
+in the solver file, which controls the tolerance (epsilon) by which two values
+can differ and still be considered equal. For example:
+
+```
+x = 13.5f
+y = 13.6f
+```
+
+With a precision of 0.15f these two values will be considered equal. With a
+precision of 0.05f they will not.
+
+
 # Downloading and compiling
 
 You'll need git to download the source code and gcc to compile it.
