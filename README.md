@@ -12,6 +12,9 @@ expected outputs, along with a set of code patterns (instructions) and any
 possibly-related constants as hints. Cold will then attempt to brute-force a
 programmatic solution that satisfies the given constraints.
 
+To see a list of examples that are currently solvable, see the
+[solvers/](solvers/) directory. The [solvers/unsolved/](solvers/unsolved/)
+directory contains solvers which are still being worked on.
 
 ## Solver file
 
