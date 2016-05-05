@@ -190,8 +190,8 @@ In Debian-distros:
 sudo apt-get update
 sudo apt-get install git
 sudo apt-get install build-essential
-git clone https://github.com/briansteffens/ccold
-cd ccold
+git clone https://github.com/briansteffens/cold
+cd cold
 make
 ```
 
