@@ -142,6 +142,108 @@ void interpret_let(State* state, Instruction* inst)
     state->locals_owned[state->local_count - 1] = true;
 }
 
+void interpret_basic_math(State* state, Instruction* inst)
+{
+    Value* left = resolve(state, inst->params[1]);
+    Value* right = resolve(state, inst->params[2]);
+
+    if (left->type == TYPE_INT && right->type == TYPE_INT)
+    {
+        int left_i = *((int*)left->data);
+        int right_i = *((int*)right->data);
+        int output_i;
+
+        switch (inst->type)
+        {
+        case INST_ADD:
+            output_i = left_i + right_i;
+            break;
+
+        case INST_MUL:
+            output_i = left_i * right_i;
+            break;
+
+        case INST_DIV:
+            output_i = left_i / right_i;
+            break;
+
+        default:
+            printf("No handling for this instruction type: %d\n", inst->type);
+            exit(EXIT_FAILURE);
+        }
+
+        set_local(state, inst, 0, TYPE_INT, &output_i);
+    }
+    else if (left->type == TYPE_FLOAT && right->type == TYPE_FLOAT)
+    {
+        float left_f = *((float*)left->data);
+        float right_f = *((float*)right->data);
+        float output_f;
+
+        switch (inst->type)
+        {
+        case INST_ADD:
+            output_f = left_f + right_f;
+            break;
+
+        case INST_MUL:
+            output_f = left_f * right_f;
+            break;
+
+        case INST_DIV:
+            output_f = left_f / right_f;
+            break;
+
+        case INST_EXP:
+            output_f = powf(left_f, right_f);
+            break;
+
+        default:
+            printf("No handling for this instruction type: %d\n", inst->type);
+            exit(EXIT_FAILURE);
+        }
+
+        set_local(state, inst, 0, TYPE_FLOAT, &output_f);
+    }
+    else if (left->type == TYPE_LONG_DOUBLE && right->type == TYPE_LONG_DOUBLE)
+    {
+        long double left_ld = *((long double*)left->data);
+        long double right_ld = *((long double*)right->data);
+        long double output_ld;
+
+        switch (inst->type)
+        {
+        case INST_ADD:
+            output_ld = left_ld + right_ld;
+            break;
+
+        case INST_MUL:
+            output_ld = left_ld * right_ld;
+            break;
+
+        case INST_DIV:
+            output_ld = left_ld / right_ld;
+            break;
+
+        case INST_EXP:
+            output_ld = powf(left_ld, right_ld);
+            break;
+
+        default:
+            printf("No handling for this instruction type: %d\n", inst->type);
+            exit(EXIT_FAILURE);
+        }
+
+        set_local(state, inst, 0, TYPE_LONG_DOUBLE, &output_ld);
+    }
+    else
+    {
+        printf("interpret() can't handle these types: %d, %d\n",
+                left->type, right->type);
+        exit(EXIT_FAILURE);
+    }
+}
+
 // Interpret the current line in a given [state] and advance the instruction
 // pointer if necessary.
 void interpret(State* state)
@@ -154,114 +256,11 @@ void interpret(State* state)
         interpret_let(state, inst);
         break;
 
-    case INST_ADD:;
-    case INST_MUL:;
-    case INST_DIV:;
-    case INST_EXP:;
-        int target = find_local(state, inst->params[0]->value->data);
-
-        Value* left = resolve(state, inst->params[1]);
-        Value* right = resolve(state, inst->params[2]);
-
-        Local* new_local = malloc(sizeof(Local));
-        new_local->name = strdup(state->locals[target]->name);
-        new_local->value = malloc(sizeof(Value));
-
-        if (left->type == TYPE_INT && right->type == TYPE_INT &&
-            state->locals[target]->value->type == TYPE_INT)
-        {
-            switch (inst->type)
-            {
-            case INST_ADD:
-                value_set_int(new_local->value,
-                    *((int*)left->data)+*((int*)right->data));
-                break;
-            case INST_MUL:
-                value_set_int(new_local->value,
-                    *((int*)left->data)**((int*)right->data));
-                break;
-            case INST_DIV:
-                value_set_int(new_local->value,
-                    *((int*)left->data) / *((int*)right->data));
-                break;
-            default:
-                printf("No handling for this instruction type: %d\n",
-                        inst->type);
-                exit(EXIT_FAILURE);
-            }
-        }
-        else if (left->type == TYPE_FLOAT && right->type == TYPE_FLOAT &&
-                 state->locals[target]->value->type == TYPE_FLOAT)
-        {
-            switch (inst->type)
-            {
-            case INST_ADD:
-                value_set_float(new_local->value,
-                    *((float*)left->data)+*((float*)right->data));
-                break;
-            case INST_MUL:
-                value_set_float(new_local->value,
-                    *((float*)left->data)**((float*)right->data));
-                break;
-            case INST_DIV:
-                value_set_float(new_local->value,
-                    *((float*)left->data) / *((float*)right->data));
-                break;
-            case INST_EXP:
-                value_set_float(new_local->value,
-                    powf(*((float*)left->data), *((float*)right->data)));
-                break;
-            default:
-                printf("No handling for this instruction type: %d\n",
-                        inst->type);
-                exit(EXIT_FAILURE);
-            }
-        }
-        else if (left->type == TYPE_LONG_DOUBLE &&
-                 right->type == TYPE_LONG_DOUBLE &&
-                 state->locals[target]->value->type == TYPE_LONG_DOUBLE)
-        {
-            switch (inst->type)
-            {
-            case INST_ADD:
-                value_set_long_double(new_local->value,
-                    *((long double*)left->data)+*((long double*)right->data));
-                break;
-            case INST_MUL:
-                value_set_long_double(new_local->value,
-                    *((long double*)left->data)**((long double*)right->data));
-                break;
-            case INST_DIV:
-                value_set_long_double(new_local->value,
-                    *((long double*)left->data) /
-                    *((long double*)right->data));
-                break;
-            case INST_EXP:
-                value_set_long_double(new_local->value,
-                    powf(*((long double*)left->data),
-                         *((long double*)right->data)));
-                break;
-            default:
-                printf("No handling for this instruction type: %d\n",
-                        inst->type);
-                exit(EXIT_FAILURE);
-            }
-        }
-        else
-        {
-            printf("interpret() can't handle these types: %d, %d, %d\n",
-                left->type, right->type, state->locals[target]->value->type);
-            exit(0);
-        }
-
-        if (state->locals_owned[target])
-        {
-            local_free(state->locals[target]);
-        }
-
-        state->locals[target] = new_local;
-        state->locals_owned[target] = true;
-
+    case INST_ADD:
+    case INST_MUL:
+    case INST_DIV:
+    case INST_EXP:
+        interpret_basic_math(state, inst);
         break;
 
     case INST_SIN:;
