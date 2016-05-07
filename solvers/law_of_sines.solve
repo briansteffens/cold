@@ -1,0 +1,17 @@
+# B = degrees(asin(sin(radians(C)) / c * b))
+
+depth 6
+
+precision 0.1f
+
+pattern mul
+pattern div
+pattern sin
+pattern asin
+
+input b
+input c
+input C
+
+case (4.7f, 5.5f, 1.099f) => 0.866f
+case (3.2f, 9.8f, 0.436f) => 7.926f
