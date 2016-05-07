@@ -81,6 +81,10 @@ char* instruction_type_tostring(InstructionType input)
         return "prt";
     case INST_NEXT:
         return "nxt";
+    case INST_SIN:
+        return "sin";
+    case INST_ASIN:
+        return "asin";
     default:
         printf("InstructionType %d not supported\n", input);
         exit(0);
@@ -109,6 +113,10 @@ InstructionType instruction_type_fromstring(char* input)
         return INST_PRINT;
     else if (strcmp(input, "nxt") == 0)
         return INST_NEXT;
+    else if (strcmp(input, "sin") == 0)
+        return INST_SIN;
+    else if (strcmp(input, "asin") == 0)
+        return INST_ASIN;
     else
     {
         printf("Instruction type [%s] unrecognized\n", input);
@@ -146,6 +154,25 @@ void value_set_string(Value* value, char* val)
     value->size = strlen(val) + 1;
     value->data = malloc(value->size);
     strncpy(value->data, val, value->size);
+}
+
+void value_set(Value* value, ValueType type, void* val)
+{
+    switch (type)
+    {
+        case TYPE_INT:
+            value_set_int(value, *((int*)val));
+            break;
+        case TYPE_FLOAT:
+            value_set_float(value, *((float*)val));
+            break;
+        case TYPE_LONG_DOUBLE:
+            value_set_long_double(value, *((long double*)val));
+            break;
+        default:
+            printf("Unable to set type: %d\n", type);
+            exit(EXIT_FAILURE);
+    }
 }
 
 // Set a value based on a string representation with preceding type hinting

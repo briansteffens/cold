@@ -37,6 +37,92 @@ Value* resolve(State* state, Param* param)
     }
 }
 
+void set_local(State* state, Instruction* inst, int param_index,
+        ValueType type, void* val)
+{
+    int local_index = find_local(state,
+            inst->params[param_index]->value->data);
+
+    Local* new_local = malloc(sizeof(Local));
+    new_local->name = strdup(state->locals[local_index]->name);
+    new_local->value = malloc(sizeof(Value));
+
+    value_set(new_local->value, type, val);
+
+    if (state->locals_owned[local_index])
+    {
+        local_free(state->locals[local_index]);
+    }
+
+    state->locals[local_index] = new_local;
+    state->locals_owned[local_index] = true;
+}
+
+typedef struct TrigRatioFunctions
+{
+    double (*handle_float)(double);
+    long double (*handle_long_double)(long double);
+} TrigRatioFunctions;
+
+void single_param_float_function(State* state, Instruction* inst,
+        TrigRatioFunctions* functions)
+{
+    Value* input = resolve(state, inst->params[1]);
+
+    if (input->type == TYPE_INT || input->type == TYPE_FLOAT)
+    {
+        float input_f;
+
+        if (input->type == TYPE_INT)
+        {
+            input_f = (float)*((int*)input->data);
+        }
+        else if (input->type == TYPE_FLOAT)
+        {
+            input_f = *((float*)input->data);
+        }
+        else
+        {
+            printf("Unable to deal with type %d\n", input->type);
+            exit(EXIT_FAILURE);
+        }
+
+        float output_f = (float)(*functions->handle_float)(input_f);
+        set_local(state, inst, 0, TYPE_FLOAT, &output_f);
+    }
+    else if (input->type == TYPE_LONG_DOUBLE)
+    {
+        long double output_ld =
+            (*functions->handle_long_double)(*((long double*)input->data));
+        set_local(state, inst, 0, TYPE_LONG_DOUBLE, &output_ld);
+    }
+    else
+    {
+        printf("Unable to sin type %d\n", input->type);
+        exit(EXIT_FAILURE);
+    }
+}
+
+void interpret_sin(State* state, Instruction* inst)
+{
+    TrigRatioFunctions functions;
+
+    functions.handle_float = &sin;
+    functions.handle_long_double = &sinl;
+
+    single_param_float_function(state, inst, &functions);
+}
+
+void interpret_asin(State* state, Instruction* inst)
+{
+    TrigRatioFunctions functions;
+
+    functions.handle_float = &asin;
+    functions.handle_long_double = &asinl;
+
+    single_param_float_function(state, inst, &functions);
+}
+
 // Interpret the current line in a given [state] and advance the instruction
 // pointer if necessary.
 void interpret(State* state)
@@ -172,9 +258,18 @@ void interpret(State* state)
         state->locals_owned[target] = true;
 
         break;
+    case INST_SIN:;
+        interpret_sin(state, inst);
+        break;
+
+    case INST_ASIN:
+        interpret_asin(state, inst);
+        break;
+
     case INST_JUMP:
         state->inst_ptr = *((int*)inst->params[0]->value->data);
         return;
+
     case INST_CMP:;
         Value* cmp_left = resolve(state, inst->params[0]);
         Value* cmp_right = resolve(state, inst->params[1]);

@@ -30,7 +30,9 @@ typedef enum InstructionTypes
     INST_CMP,
     INST_RET,
     INST_PRINT,
-    INST_NEXT
+    INST_NEXT,
+    INST_SIN,
+    INST_ASIN
 } InstructionType;
 
 typedef enum PatternValues
@@ -152,6 +154,7 @@ void value_set_string(Value* value, char* val);
 void value_set_int(Value* value, int val);
 void value_set_float(Value* value, float val);
 void value_set_long_double(Value* value, long double val);
+void value_set(Value* value, ValueType type, void* val);
 void value_set_from_string(Value* value, char* input);
 Value* value_clone(const Value* src);
 bool compare(Context* ctx, Value* left, Value* right);
