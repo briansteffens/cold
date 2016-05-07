@@ -123,6 +123,25 @@ void interpret_asin(State* state, Instruction* inst)
     single_param_float_function(state, inst, &functions);
 }
 
+void interpret_let(State* state, Instruction* inst)
+{
+    state->local_count++;
+    state->locals = realloc(state->locals,
+        state->local_count * sizeof(Local*));
+    state->locals_owned = realloc(state->locals_owned,
+        state->local_count * sizeof(bool));
+
+    Local* local = malloc(sizeof(Local));
+
+    local->name = strdup(inst->params[0]->value->data);
+
+    Value* new_value = resolve(state, inst->params[1]);
+    local->value = value_clone(new_value);
+
+    state->locals[state->local_count - 1] = local;
+    state->locals_owned[state->local_count - 1] = true;
+}
+
 // Interpret the current line in a given [state] and advance the instruction
 // pointer if necessary.
 void interpret(State* state)
@@ -132,22 +151,7 @@ void interpret(State* state)
     switch (inst->type)
     {
     case INST_LET:
-        state->local_count++;
-        state->locals = realloc(state->locals,
-            state->local_count * sizeof(Local*));
-        state->locals_owned = realloc(state->locals_owned,
-            state->local_count * sizeof(bool));
-
-        Local* local = malloc(sizeof(Local));
-
-        local->name = strdup(inst->params[0]->value->data);
-
-        Value* new_value = resolve(state, inst->params[1]);
-        local->value = value_clone(new_value);
-
-        state->locals[state->local_count - 1] = local;
-        state->locals_owned[state->local_count - 1] = true;
-
+        interpret_let(state, inst);
         break;
 
     case INST_ADD:;
