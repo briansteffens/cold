@@ -149,6 +149,7 @@ void interpret(State* state)
         state->locals_owned[state->local_count - 1] = true;
 
         break;
+
     case INST_ADD:;
     case INST_MUL:;
     case INST_DIV:;
@@ -258,6 +259,7 @@ void interpret(State* state)
         state->locals_owned[target] = true;
 
         break;
+
     case INST_SIN:;
         interpret_sin(state, inst);
         break;
@@ -266,45 +268,11 @@ void interpret(State* state)
         interpret_asin(state, inst);
         break;
 
-    case INST_JUMP:
-        state->inst_ptr = *((int*)inst->params[0]->value->data);
-        return;
-
-    case INST_CMP:;
-        Value* cmp_left = resolve(state, inst->params[0]);
-        Value* cmp_right = resolve(state, inst->params[1]);
-
-        if (cmp_left->type != TYPE_INT || cmp_right->type != TYPE_INT)
-        {
-            printf("Type system can't support this\n");
-            exit(0);
-        }
-
-        if (*((int*)cmp_left->data) == *((int*)cmp_right->data))
-        {
-            state->inst_ptr = *((int*)inst->params[2]->value->data);
-            return;
-        }
-
-        break;
-    case INST_PRINT:;
-        Value* print_target = resolve(state, inst->params[0]);
-
-        switch (print_target->type)
-        {
-        case TYPE_INT:
-            printf("%d\n", *((int*)print_target->data));
-            break;
-        default:
-            printf("Can't print this type\n");
-            exit(0);
-        }
-
-        break;
     case INST_RET:
         state->ret = resolve(state, inst->params[0]);
         state->inst_ptr = state->instruction_count;
         break;
+
     default:
         printf("Unrecognized instruction type: %d\n", inst->type);
         exit(0);

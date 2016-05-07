@@ -26,10 +26,7 @@ typedef enum InstructionTypes
     INST_MUL,
     INST_DIV,
     INST_EXP,
-    INST_JUMP,
-    INST_CMP,
     INST_RET,
-    INST_PRINT,
     INST_NEXT,
     INST_SIN,
     INST_ASIN

@@ -71,14 +71,8 @@ char* instruction_type_tostring(InstructionType input)
         return "div";
     case INST_EXP:
         return "exp";
-    case INST_JUMP:
-        return "jmp";
-    case INST_CMP:
-        return "cmp";
     case INST_RET:
         return "ret";
-    case INST_PRINT:
-        return "prt";
     case INST_NEXT:
         return "nxt";
     case INST_SIN:
@@ -103,14 +97,8 @@ InstructionType instruction_type_fromstring(char* input)
         return INST_DIV;
     else if (strcmp(input, "exp") == 0)
         return INST_EXP;
-    else if (strcmp(input, "jmp") == 0)
-        return INST_JUMP;
-    else if (strcmp(input, "cmp") == 0)
-        return INST_CMP;
     else if (strcmp(input, "ret") == 0)
         return INST_RET;
-    else if (strcmp(input, "prt") == 0)
-        return INST_PRINT;
     else if (strcmp(input, "nxt") == 0)
         return INST_NEXT;
     else if (strcmp(input, "sin") == 0)
